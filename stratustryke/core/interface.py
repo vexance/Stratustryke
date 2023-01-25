@@ -775,6 +775,10 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
 
         try:
             res = self.framework.current_module.run()
+        except KeyboardInterrupt:
+            self.print_line('')
+            return
+        
         except Exception as err:
             self.print_error(f'Exception thrown while running module \'{self.framework.current_module.name}\'')
             self.print_error(f'{err}')

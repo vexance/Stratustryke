@@ -111,7 +111,8 @@ class AWSModule(StratustrykeModule):
 
         # Temporary creds (from STS service 'ASIA...') require a session token
         key_prefix = self.get_opt('AUTH_ACCESS_KEY_ID')[0:3]
-        if (self.get_opt('AUTH_SESSION_TOKEN') == '' and key_prefix in ['ASIA']):
+        token = self.get_opt('AUTH_SESSION_TOKEN')
+        if ((token == '' or token == None)  and key_prefix in ['ASIA']):
             return (False, f'Session token required for temporary STS credential \'{self.auth_access_key_id.value}\'')
 
         # Looks good
