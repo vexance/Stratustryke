@@ -4,6 +4,7 @@
 from stratustryke.core.option import Options
 from stratustryke.settings import AWS_DEFAULT_REGION
 import typing
+import stratustryke.core.credential
 
 
 class StratustrykeModule(object):
@@ -100,7 +101,7 @@ class AWSModule(StratustrykeModule):
         self._options.add_string('AUTH_SECRET_KEY', 'AWS secret key to use for authentication', True, regex='[0-9a-zA-Z\/+]{40}', sensitive=True)
         self._options.add_string('AUTH_SESSION_TOKEN', 'AWS session token for temporary credential authentication', regex='[0-9a-zA-Z\/+]{364}', sensitive=True)
         self._options.add_string('AWS_REGION', 'AWS region to specify within calls', False, AWS_DEFAULT_REGION)
-
+        self._cred = None
     
     def validate_options(self) -> tuple:
         # Validate required params and regex matches
@@ -115,6 +116,19 @@ class AWSModule(StratustrykeModule):
 
         # Looks good
         return (True, None)
+
+
+    def get_cred(self, region: str = None):
+        if self._cred == None:
+            access_key = self.get_opt('AUTH_ACCESS_KEY_ID')
+            secret = self.get_opt('AUTH_SECRET_KEY')
+            token = self.get_opt('AUTH_SESSION_TOKEN')
+            cred_region = region if (region != None) else self.get_opt('AWS_REGION')
+
+            self._cred = stratustryke.core.credential.AWSCredential(f'{self.name}', access_key=access_key, secret_key=secret, session_token=token, default_region=cred_region)
+
+        return self._cred
+
 
     @property
     def search_name(self):
