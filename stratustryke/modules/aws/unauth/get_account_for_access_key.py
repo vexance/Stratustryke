@@ -1,7 +1,5 @@
 from stratustryke.core.module import AWSModule
-from stratustryke.core.lib import StratustrykeException
 from stratustryke.core.credential import AWSCredential
-from stratustryke.core.option import Option
 
 class Module(AWSModule):
     def __init__(self, framework) -> None:
@@ -21,13 +19,9 @@ class Module(AWSModule):
         return f'aws/unauth/{self.name}'
 
     def run(self) -> bool:
-
-        access_key = self.get_opt('AUTH_ACCESS_KEY_ID')
-        secret_key = self.get_opt('AUTH_SECRET_KEY')
-        session_token = self.get_opt('AUTH_SESSION_TOKEN')
         enum_key = self.get_opt('ENUM_KEY')
 
-        cred = AWSCredential('', access_key=access_key, secret_key=secret_key, session_token=session_token)
+        cred = self.get_cred()
 
         try:
             session = cred.session()

@@ -20,9 +20,6 @@ class Module(AWSModule):
         return f'aws/authed/{self.name}'
 
     def run(self):
-        access_key = self.get_opt('AUTH_ACCESS_KEY_ID')
-        secret_key = self.get_opt('AUTH_SECRET_KEY')
-        token = self.get_opt('AUTH_SESSION_TOKEN')
         region = self.get_opt('AWS_REGION')
 
         acc_id = self.get_opt('ACCOUNT_ID')
@@ -30,7 +27,7 @@ class Module(AWSModule):
         message = self.get_opt('SNS_MESSAGE')
 
         topic_arn = f'arn:aws:sns:{region}:{acc_id}:{topic}'
-        cred = AWSCredential('', access_key=access_key, secret_key=secret_key, session_token=token)
+        cred = self.get_cred()
 
         try:
             session = cred.session()

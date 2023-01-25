@@ -17,12 +17,7 @@ class Module(AWSModule):
         return f'aws/authed/{self.name}'
 
     def run(self):
-        access_key = self.get_opt('AUTH_ACCESS_KEY_ID')
-        secret_key = self.get_opt('AUTH_SECRET_KEY')
-        token = self.get_opt('AUTH_SESSION_TOKEN')
-
-        cred = AWSCredential('', access_key=access_key, secret_key=secret_key, session_token=token)
-
+        cred = self.get_cred()
         try:
             session = cred.session()
             client = session.client('sts')
