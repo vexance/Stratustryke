@@ -447,6 +447,23 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         self.last_module, self.framework.current_module = self.framework.current_module, self.last_module
 
 
+    # Command: validate
+    # Actions: Performs validation checks of options against the current module
+    # Syntax: 'validate'
+
+    @stratustryke.core.command.command('Perform module validation checks')
+    def do_validate(self, args):
+        if self.framework.current_module == None:
+            self.print_line('No module currently selected')
+            return
+
+        success, msg = self.framework.current_module.validate_options()
+        if success:
+            self.print_status('Module validation successful')
+        else:
+            self.print_error(msg)
+
+
     # Command: back
     # Action: Unsets the currently selected module, returning user to default prompt
     # Syntax: 'back'
@@ -764,12 +781,12 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
 
         force_validate = self.framework._config.get_val('FORCE_VALIDATE_OPTIONS')
         if force_validate:
-            self.print_status(f'Validating module options{os.linesep}')
+            self.print_status('Validating module options')
             valid, msg = self.framework.current_module.validate_options()
             if not valid:
                 self.print_error(f'{msg}{os.linesep}')
                 return
-            self.print_status('Module options passed validation')
+            self.print_status(f'Module options passed validation{os.linesep}')
         
         self.print_status(f'Running module...{os.linesep}')
 
