@@ -155,6 +155,20 @@ class Command(cmd.Cmd):
     def help_help(self):
         self.do_help('') # 
 
+    def precmd(self, line):  # use this to allow using '?' after the command for help
+        tmp_line = line.split()
+        if not tmp_line:
+            return line
+        if tmp_line[0] in self._disabled_commands:
+            self.default(tmp_line[0])
+            return ''
+        if len(tmp_line) == 1:
+            return line
+        if tmp_line[1] == '?':
+            self.do_help(tmp_line[0])
+            return ''
+        return line
+
     def do_exit(self, args):
         raise StratustrykeExit(0, 'Closing stratustryke interpreter')
 

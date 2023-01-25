@@ -190,6 +190,12 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         return module
 
 
+    def precmd(self, line):
+        if self.framework.spooler != None:
+            self.framework.spooler.write(f'{self.prompt}{line}{os.linesep}')
+        return super().precmd(line)
+
+
     # ================================================ #
     #                Framework Commands                #
     # ================================================ #
@@ -336,8 +342,11 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         self._logger.info('Recevied exit command')
         # Add closing quotes here?
         
-        # Try to copy command history to 'home/<user>/.local/strautsryke/history.txt
-        try:
+        if self.framework.spooler != None:
+            self.framework.spooler.close()
+            self.framework.spooler = None
+
+        try: # Try to copy command history to 'home/<user>/.local/strautsryke/history.txt
             import readline
             readline.write_history_file(str(stratustryke.core.lib.home_dir()/'history.txt'))
         except (ImportError, IOError):
@@ -533,7 +542,12 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
             self.print_line(f'  {args.option_name} => {args.option_value}')
 
     def complete_set(self, text, line, begidx, endidx):
-        return [f'{i} ' for i in self.framework.current_module._options.keys() if i.startswith(text.upper())]
+        completions = [f'{i} ' for i in self.framework.current_module._options.keys() if i.startswith(text.upper())]
+        if 'true'.startswith(text.lower()):
+            completions.append('true')
+        if 'false'.startswith(text.lower()):
+            completions.append('false')
+        return completions
 
 
     # Command: 'options'
@@ -673,7 +687,12 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
             self.print_line(f'Unknown config command action \'{args.cmd_action}\' not in [\'show\', \'set\']')
 
     def complete_config(self, text, line, begidx, endidx):
-        return [i for i in self.framework._config.keys() if i.startswith(text.upper())]
+        completions = [i for i in self.framework._config.keys() if i.startswith(text.upper())]
+        if 'true'.startswith(text.lower()):
+            completions.append('true')
+        if 'false'.startswith(text.lower()):
+            completions.append('false')
+        return completions
 
 
     # Command: 'use'
@@ -768,6 +787,54 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         return [i for i in self.framework.credentials.list_aliases(workspace) if i.startswith(text)]
 
 
+    # Command: 'spool'
+    # Action: Enables or disables spooling of output to a file
+    # Syntax: 'spool <filename>', 'spool off'
+    # Text Completion: directories on the local filesystem
+    
+    @stratustryke.core.command.command('Enable or disable spooling of stratustryke output to a file')
+    @stratustryke.core.command.argument('path', help = '\'off\' or file to enable / switch spooling to')
+    def do_spool(self, args):
+        if args.path.lower() == 'off':
+            if self.framework.spooler != None:
+                self.framework.spooler.close()
+                self.framework.spooler = None
+            
+            self.print_status('Spooling of stratustryke output disabled')
+        
+        elif self.framework.spooler != None: # already spooling
+            self.print_status(f'Already spooling output to a file')
+            return
+
+        else: # we'll try and create the file handle
+            spool_overwrite = self.framework._config.get_val('SPOOL_OVERWRITE')
+            mode = 'w' if (spool_overwrite) else 'a'
+            path = Path(args.path)
+
+            if path.exists() and path.is_dir(): # 
+                self.print_line(f'Specfied path is a directory')
+                return
+
+            elif path.exists() and path.is_file():
+                if spool_overwrite:
+                    self.print_status(f'Overwriting file {path.absolute()}')
+                else:
+                    self.print_status(f'Appending to file: {path.absolute()}')
+
+            self.print_status(f'Spooling to {path.absolute()}')
+            try:
+                self.framework.spooler = open(path, mode)
+            except Exception as err:
+                self.print_error(f'{err}')
+                self.framework.spooler = None
+                return
+
+    def complete_spool(self, text, line, begidx, endidx):
+        completions = complete_path(text, True, True)
+        if 'off'.startswith(text):
+            completions.append('off')
+        return completions
+
     # Command: 'run'
     # Action: Runs the current module with the option values specified
     # Syntax: 'run'
@@ -802,18 +869,3 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
             res = None
 
         
-
-
-
-
-        
-
-    
-            
-        
-
-
-        
-
-        
-

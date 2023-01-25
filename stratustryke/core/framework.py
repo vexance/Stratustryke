@@ -62,6 +62,7 @@ class StratustrykeFramework(object):
             if not path.endswith('__pycache__'):
                 search_dirs.append(path)
 
+        self.spooler = None # Will hold the I/O handle
         self.credentials = CredentialStoreConnector(self, str(stratustryke.core.lib.sqlite_filepath()))
         self.modules = stratustryke.core.modmgr.ModManager(self, search_dirs)
         self._logger.info(f'Loaded {len(self.modules)} modules into the framework')
@@ -72,14 +73,8 @@ class StratustrykeFramework(object):
 
 
     def spool_message(self, msg: str) -> None:
-        # handle file IO spooling
-        # _spooling is a flag saying whether we have spooling on/off
-        # _spool_handle will store a file IO object
-        # Need to handle spool ./path/to/file.txt 
-        # and spool off args
-        #if self._spooling:
-        #    self._spool_handle.write(msg)
-        return None
+        if self.spooler != None:
+            self.spooler.write(msg)
 
 
     # === various logging and print utility methods === #
