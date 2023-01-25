@@ -104,7 +104,6 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         self.print_warning = self.framework.print_warning # yellow [!] msg
         self.print_success = self.framework.print_success # green [+] msg
         self.print_failure = self.framework.print_failure # red [-] msg
-        self.print_interesting = self.framework.print_interesting # light green [?] msg
         self.print_line = self.framework.print_line # regular text
 
         # Run resource file on launch if specified

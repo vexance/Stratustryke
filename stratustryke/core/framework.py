@@ -133,16 +133,6 @@ class StratustrykeFramework(object):
         self._stdout.flush()
         return self.spool_message(output)
 
-    def print_interesting(self, msg: str) -> None:
-        '''Prints (light green) potential success message: [?] {msg}'''
-        use_color = self._config.get_val('COLORED_OUTPUT')
-        prefix = colored('[?] ', 'light_green', attrs=('bold',)) if use_color else '[?] '
-        output = f'{prefix} {msg}{os.linesep}'
-        
-        self._stdout.write(output)
-        self._stdout.flush()
-        return self.spool_message(output)
-
     def print_line(self, msg: str) -> None:
         '''Prints line to the stdout with regular text: {msg}'''
         output = f'{msg}{os.linesep}'
