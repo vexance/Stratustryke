@@ -130,11 +130,6 @@ class AWSCredential(CloudCredential):
         return self._session
 
 
-    def assume_role(self, arn: str) -> CloudCredential:
-        '''Attempts to use sts assume-role to get temporary credentials for a role'''
-        pass
-
-
     def verify(self) -> bool:
         '''Performs an STS get-caller-identity call in order to determine the access_key_id, secret_key, and session_token are valid'''
         session = self.get_boto_session()

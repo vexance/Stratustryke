@@ -149,6 +149,7 @@ class StratustrykeFramework(object):
             module = importlib.import_module(mod_package)
             if reload_mod:
                 importlib.reload(module)
+
             instance = module.Module(self)
         except Exception as err:
             self._logger.error(f'Failed to load module: \'{mod_path}\'', exc_info=True)
@@ -175,7 +176,7 @@ class StratustrykeFramework(object):
             raise stratustryke.core.lib.FrameworkRuntimeError(f'Invalid module: \'{mod_path}\' requested for reload')
 
         self._logger.info(f'Reloading \'{mod_path}\' module')
-        
+
         instance = self.load_module(mod_path, True)
         # Ensure Module class instance has required attributes
         if not isinstance(instance, StratustrykeModule): # Modules must inherit StratustrykeModule

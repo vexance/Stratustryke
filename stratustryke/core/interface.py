@@ -89,7 +89,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         if not stratustryke.settings.on_linux:
             pass
             #self._hidden_commands.append() # Not hiding any commands on linux as of v.0.0.1
-        self._hidden_commands.append(['cd', 'ls', 'cat', 'dir', 'type', 'pwd'])
+        self._hidden_commands.extend(['cd', 'ls', 'cat', 'dir', 'type', 'pwd'])
 
         # init logging
         self.log_handler = log_handler
@@ -144,7 +144,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     @property
     def prompt(self):
         '''The CLI prompt'''
-        coloring = self.framework._config.get_opt('COLORED_OUTPUT')
+        coloring = self.framework._config.get_val('COLORED_OUTPUT')
         prog_name = colored(stratustryke.__progname__, 'blue', attrs=('bold',)) if (coloring) else stratustryke.__progname__
 
         if self.framework.current_module == None:
@@ -175,9 +175,10 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         mod_is_current_module = (self.framework.current_module != None) and (module.path == self.framework.current_module.path)
 
         try: 
-            module = self.framework.reload_module(module.path)
+            module = self.framework.reload_module(module.search_name)
         except Exception as err:
             self.print_error(f'Exception thrown when reloading module: \'{module.name}\'')
+            self.print_error(f'{err}')
             self._logger.error(f'Exception thrown when reloading module: \'{module.name}\'')
             return None
         
@@ -486,28 +487,28 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Action: Reloads a module in the framework, resetting options
     # Syntax: 'reload', 'reload <module>'
     # Text Completion: modules loaded into the framework
-    # Todo: Not working currently
+    # Todo: Broken - disabling for now; Not working currently
 
-    @stratustryke.core.command.command('Reloads a module in the framework')
-    @stratustryke.core.command.argument('module', nargs='?', help = 'The module to re-load')
-    def do_reload(self, args):
-        if args.module != None:
-            if args.module not in self.framework.modules:
-                self.print_line(f'Module: \'{args.module}\' not found')
+    # @stratustryke.core.command.command('Reloads a module in the framework')
+    # @stratustryke.core.command.argument('module', nargs='?', help = 'The module to re-load')
+    # def do_reload(self, args):
+    #     if args.module != None:
+    #         if args.module not in self.framework.modules:
+    #             self.print_line(f'Module: \'{args.module}\' not found')
             
-            mod = self.framework.modules[args.module]
+    #         mod = self.framework.modules[args.module]
 
-        elif self.framework.current_module != None: # Use current module if no module arg specified
-            mod = self.framework.current_module
+    #     elif self.framework.current_module != None: # Use current module if no module arg specified
+    #         mod = self.framework.current_module
 
-        else: # Current module not set and no <module> arg supplied
-            self.print_line(f'Must specifiy module to reload or run command \'use\' prior to reloading a module')
-            return
+    #     else: # Current module not set and no <module> arg supplied
+    #         self.print_line(f'Must specifiy module to reload or run command \'use\' prior to reloading a module')
+    #         return
         
-        self.reload_module(mod)
+    #     self.reload_module(mod)
 
-    def complete_reload(self, text, line, begidx, endidx):
-        return [i for i in self.framework.modules.keys() if i.startswith(text)]
+    # def complete_reload(self, text, line, begidx, endidx):
+    #     return [i for i in self.framework.modules.keys() if i.startswith(text)]
     
 
     # Command: 'set'
@@ -862,7 +863,6 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         except KeyboardInterrupt:
             self.print_line('')
             return
-        
         except Exception as err:
             self.print_error(f'Exception thrown while running module \'{self.framework.current_module.name}\'')
             self.print_error(f'{err}')

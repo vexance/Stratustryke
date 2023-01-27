@@ -108,7 +108,7 @@ def module_data_dir(mod: str) -> Path:
     :rtype: <Path> Path to module-specific directory for a session
     '''
     # e.g., /home/user/.stratustryke/mysession/modules/aws_whoami
-    p = (session_dir()/'modules'/mod).absolute()
+    p = (home_dir()/'modules'/mod).absolute()
     os.makedirs(p, exist_ok=True)
     return p
 

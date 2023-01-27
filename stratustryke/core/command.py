@@ -131,11 +131,11 @@ class Command(cmd.Cmd):
                 self.print_line('')
                 self.print_error('Please use \'exit\' to quit.')
             except StratustrykeExit as err:
-                if err.status == 0:
-                    self.print_warning(f'{err.message} with status code: {err.status}')
-                else: # non-default exit
+                if err.status != 0: # non-default exit
                     self.print_error(f'{err.message} with status code: {err.status}')
                 break
+            except Exception as err:
+                self.print_error(f'Exception thrown: {err}')
         # returns NoneType
 
 
