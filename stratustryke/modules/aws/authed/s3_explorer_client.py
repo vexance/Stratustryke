@@ -465,7 +465,7 @@ class S3ClientExplorer(stratustryke.core.command.Command):
             self.framework.print_success(f'Downloaded {filename} to {download_dir}')
 
         except Exception as err:
-            self.framework.print_error(f'{err}{os.linesep}')
+            self.framework.print_failure(f'{err}{os.linesep}')
             self.framework._logger.error(f'{err}')
             return
 
