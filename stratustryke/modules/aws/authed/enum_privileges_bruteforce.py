@@ -15,7 +15,7 @@ class Module(AWSModule):
             ]
         }
 
-        self._options.add_boolean('VERBOSE', 'When enabled, displays whcih APIs cannot be performed by the user', False, False)
+        self._options.add_boolean('VERBOSE', 'When enabled, displays whcih APIs cannot be performed by the user', True, True)
 
 
     @property
