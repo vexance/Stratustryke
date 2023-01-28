@@ -25,7 +25,7 @@ class Module(AWSModule):
     def run(self):
         region = self.get_opt('AWS_REGION')
         cred = self.get_cred(region=region)
-        verbose = self.get_cred('VERBOSE')
+        verbose = self.get_opt('VERBOSE')
 
         self.framework.print_status(f'Enumerating API privileges...')
 
@@ -56,7 +56,12 @@ class Module(AWSModule):
                 # Make the call
                 try:
                     api_function = getattr(client, apicall)
-                    res = api_function()
+                    
+                    # specifically supporting this for aws/authed/generate_console_signin_link module
+                    if service == 'sts' and apicall == 'get_federation_token': 
+                        res=api_function(Name='stratustryke')
+                    else:
+                        res = api_function()
                     
                     self.framework.print_success(f'{service}:{"".join(split)}')
 
@@ -1139,6 +1144,7 @@ BRUTEFORCE_TESTS = {
         "list_streams"
     ],
     "sts": [
+        "get_federation_token",
         "get_caller_identity",
         "get_session_token"
     ],
