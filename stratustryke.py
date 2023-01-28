@@ -14,8 +14,8 @@ from stratustryke.core.interface import InteractiveInterpreter
 def main():
 	parser = argparse.ArgumentParser(description='Straustryke: modular cloud security framework', conflict_handler='resolve')
 	parser.add_argument('-v', '--version', action='version', version=parser.prog + ' Version: ' + __version__)
-	parser.add_argument('-L', '--log', dest='loglvl', action='store', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='CRITICAL', help='set the logging level')
-	parser.add_argument('-r', '--rc-file', dest='resource_file', default=None, help='execute a resource file')
+	parser.add_argument('--log-level', dest='loglvl', action='store', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], default='CRITICAL', help='set the logging level')
+	parser.add_argument('--rc-file', dest='resource_file', default=None, help='execute a resource file')
 	arguments = parser.parse_args()
 
 	logging.getLogger('').setLevel(logging.DEBUG)
