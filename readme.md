@@ -1,7 +1,7 @@
 Stratustryke - Modular cloud security tooling framework
 ======================================================
 
-Inspired by popular security frameworks such as [Pacu](https://github.com/RhinoSecurityLabs/pacu) and [Metasploit](https://github.com/rapid7/metasploit-framework), Stratustryke aims to consolidate cloud security tooling for multiple cloud providers into one easily configurable framework. The Stratustryke framework architecture is based off [@rsmusllp](https://github.com/rsmusllp)'s and [@zeroSteiner](https://github.com/zeroSteiner)'s [Termineter](https://github.com/rsmusllp/termineter), and leverages slightly modified versions of it's core classes heavily.
+Inspired by popular security frameworks such as [Pacu](https://github.com/RhinoSecurityLabs/pacu) and [Metasploit](https://github.com/rapid7/metasploit-framework), Stratustryke aims to consolidate cloud security tooling for multiple cloud providers into one easily configurable framework. The Stratustryke framework architecture is based off [@rsmusllp](https://github.com/rsmusllp)'s and [@zeroSteiner](https://github.com/zeroSteiner)'s [Termineter](https://github.com/rsmusllp/termineter), and leverages modified versions of it's various components.
 
 ~~~txt
 user@linux:~: ./stratustryke.py             
@@ -12,8 +12,8 @@ user@linux:~: ./stratustryke.py
      /___/\__/_/  \_,_/\__/\_,_/___/\__/_/  \_, /_/\_\__/      
                                            /___/                
 
-     stratustryke v0.0.1
-     Loaded modules: 5
+     stratustryke v0.1.0a
+     Loaded modules: 14
 
 stratustryke > 
 ~~~
@@ -59,7 +59,7 @@ options:
 </details>
 
 ## Interpreter Command Details
-For a complete list of supported, see [here](./commands.md).
+For a complete list of supported, see (todo) [here](./commands.md).
 
 ## Architecture
 todo
