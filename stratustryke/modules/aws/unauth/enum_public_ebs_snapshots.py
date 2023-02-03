@@ -1,6 +1,5 @@
 
 from stratustryke.core.module import AWSModule
-from stratustryke.core.lib import StratustrykeException, module_data_dir
 from pathlib import Path
 
 class Module(AWSModule):

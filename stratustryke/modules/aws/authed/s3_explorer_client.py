@@ -1,5 +1,4 @@
 from stratustryke.core.module import AWSModule
-from stratustryke.core.credential import AWSCredential
 from stratustryke.core.lib import StratustrykeException, module_data_dir
 import stratustryke.core.command
 import logging

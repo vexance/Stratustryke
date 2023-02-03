@@ -1,6 +1,5 @@
 
 from stratustryke.core.module import AWSModule
-from stratustryke.core.credential import AWSCredential
 
 class Module(AWSModule):
     def __init__(self, framework) -> None:

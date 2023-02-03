@@ -1,5 +1,4 @@
 from stratustryke.core.module import AWSModule
-from stratustryke.core.credential import AWSCredential
 import botocore
 
 class Module(AWSModule):

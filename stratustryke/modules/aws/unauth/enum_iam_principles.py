@@ -1,5 +1,4 @@
 from stratustryke.core.module import AWSModule
-from stratustryke.core.credential import AWSCredential
 from pathlib import Path
 import requests
 from stratustryke.core.lib import StratustrykeException
