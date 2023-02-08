@@ -5,6 +5,7 @@ from stratustryke.core.option import Options
 from stratustryke.settings import AWS_DEFAULT_REGION
 import typing
 import stratustryke.core.credential
+from os import linesep
 
 
 class StratustrykeModule(object):
@@ -47,6 +48,16 @@ class StratustrykeModule(object):
         :rtype: (bool, str | None)'''
         # Wrapper for Options class validate_options() call; can be overriden for additional checks
         return self._options.validate_options()
+
+
+    def load_strings(self, file: str) -> list[str] | None:
+        try:
+            with open(file, 'r') as handle:
+                return [line.strip(f'{linesep}') for line in handle.readlines()]
+        
+        except Exception as err:
+            self.framework.print_error(f'Error reading contents of file: {file}')
+            return None
 
 
     def show_info(self) -> list:
