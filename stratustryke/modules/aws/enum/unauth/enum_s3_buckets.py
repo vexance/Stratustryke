@@ -17,8 +17,7 @@ class Module(StratustrykeModule):
             'References': ['https://github.com/initstring/cloud_enum']
         }
 
-        self._options.add_string('KEYWORD_FILE', 'File containing list of keywords to mutate', False)
-        self._options.add_string('KEYWORD', 'Individual keyword to mutate (overriden by KEYWORD_FILE)', False)
+        self._options.add_string('KEYWORD', 'Individual keyword to mutate (overriden by KEYWORD_FILE)', True)
         self._options.add_string('MUTATIONS', 'File containing list of strings to pre/append to keyword(s)', True, default=str(stratustryke_dir()/'data/multi/cloud_storage_mutations.txt'))
         self._options.add_integer('THREADS', '(WIP) Number of threads to use [1-10]', True, 1)
 
@@ -32,13 +31,10 @@ class Module(StratustrykeModule):
             return (valid, msg)
 
         key = self.get_opt('KEYWORD')
-        keywords = self.get_opt('KEYWORD_FILE')
+        keywords = key[5:] if key.startswith('file:') else None
         if keywords != None:
             if not (Path(keywords).exists() and Path(keywords).is_file()):
-                return (False, 'Cannot find specified keywords file')
-        else:
-            if key == None:
-                return (False, 'Must specify either KEYWORD or KEYWORD_FILE option')
+                return (False, 'Cannot find specified keyword file')
         
         perms = self.get_opt('MUTATIONS')
         if not (Path(perms).exists() and Path(perms).is_file()):
@@ -50,14 +46,6 @@ class Module(StratustrykeModule):
 
         return (True, None)
 
-    def load_strings(self, file: str) -> list[str]:
-        try:
-            with open(file, 'r') as handle:
-                return [line.strip(f'{linesep}') for line in handle.readlines()]
-        
-        except Exception as err:
-            self.framework.print_error(f'Error reading contents of file: {file}')
-            return None
 
     def permutate(self, keywords: list[str], permutations: list[str]) -> list[str]:
         out = []
@@ -74,10 +62,10 @@ class Module(StratustrykeModule):
         return out
 
     def run(self):
-        kw_file = self.get_opt('KEYWORD_FILE')
         kw = self.get_opt('KEYWORD')
 
-        if kw_file != None:
+        if kw.startswith('file:'):
+            kw_file = kw[5:]
             keywords = self.load_strings(kw_file)
         else:
             keywords = [kw]
