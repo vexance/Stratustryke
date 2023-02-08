@@ -94,8 +94,7 @@ class Module(StratustrykeModule):
 
         total = len(wordlist)
         percentiles = [int(total* (i * 0.1)) for i in range (1, 11)]
-        self.framework.print_status(f'Prepared {total} total mutations')
-        self.framework.print_status(f'Enter Ctrl-D for completion status')
+        self.framework.print_status(f'Prepared {total} total mutations; beginning enumeration...')
         
         for i in range(0,len(wordlist)):
             if i in percentiles:
