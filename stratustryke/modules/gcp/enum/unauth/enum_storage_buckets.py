@@ -11,7 +11,7 @@ class Module(StratustrykeModule):
             'Authors': ['@vexance'],
             'Description': 'Enumerate GCP storage buckets from a provided wordlist',
             'Details': 'Performs a series of HTTP/S requests to gcp storage api endpoint and analyzes the response to determine whether the bucket exists and whether it is public.',
-            'References': ['https://github.com/initstring/cloud_enum']
+            'References': ['https://rhinosecuritylabs.com/gcp/google-cloud-platform-gcp-bucket-enumeration/']
         }
 
         self._options.add_string('KEYWORD', 'Individual keyword to mutate (overriden by KEYWORD_FILE)', True)
