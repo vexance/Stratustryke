@@ -19,7 +19,7 @@ class Module(StratustrykeModule):
 
         self._options.add_string('KEYWORD_FILE', 'File containing list of keywords to mutate', False)
         self._options.add_string('KEYWORD', 'Individual keyword to mutate (overriden by KEYWORD_FILE)', False)
-        self._options.add_string('MUTATIONS', 'File containing list of strings to pre/append to keyword(s)', True, default=str(stratustryke_dir()/'data/aws/mutations_enum_s3_buckets.txt'))
+        self._options.add_string('MUTATIONS', 'File containing list of strings to pre/append to keyword(s)', True, default=str(stratustryke_dir()/'data/multi/cloud_storage_mutations.txt'))
         self._options.add_integer('THREADS', '(WIP) Number of threads to use [1-10]', True, 1)
 
     @property
