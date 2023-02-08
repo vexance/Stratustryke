@@ -13,7 +13,7 @@ class Module(AWSModule):
 
     @property
     def search_name(self):
-        return f'aws/authed/{self.name}'
+        return f'aws/enum/authed/{self.name}'
 
     def run(self):
         cred = self.get_cred()

@@ -22,7 +22,7 @@ class Module(StratustrykeModule):
 
     @property
     def search_name(self) -> str:
-        return f'util/{self.name}'
+        return f'generic/util/{self.name}'
 
     def run(self) -> bool:
 

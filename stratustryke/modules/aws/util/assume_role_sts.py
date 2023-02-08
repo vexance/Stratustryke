@@ -21,7 +21,7 @@ class Module(AWSModule):
 
     @property
     def search_name(self):
-        return f'aws/authed/{self.name}'
+        return f'aws/util/{self.name}'
 
     def run(self):
         cred = self.get_cred()

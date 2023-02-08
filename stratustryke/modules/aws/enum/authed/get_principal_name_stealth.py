@@ -16,7 +16,7 @@ class Module(AWSModule):
 
     @property
     def search_name(self):
-        return f'aws/authed/{self.name}'
+        return f'aws/enum/authed/{self.name}'
 
     def run(self):
         region = self.get_opt('AWS_REGION')

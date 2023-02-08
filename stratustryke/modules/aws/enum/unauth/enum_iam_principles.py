@@ -22,7 +22,7 @@ class Module(AWSModule):
     
     @property
     def search_name(self):
-        return f'aws/unauth/{self.name}'
+        return f'aws/enum/unauth/{self.name}'
 
 
     def get_policy(self, type: str, name: str) -> str:

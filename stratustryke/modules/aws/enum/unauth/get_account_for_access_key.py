@@ -15,7 +15,7 @@ class Module(AWSModule):
 
     @property
     def search_name(self):
-        return f'aws/unauth/{self.name}'
+        return f'aws/enum/unauth/{self.name}'
 
     def run(self) -> bool:
         enum_key = self.get_opt('ENUM_KEY')

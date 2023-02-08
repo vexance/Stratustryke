@@ -8,7 +8,7 @@ class Module(AWSModule):
         super().__init__(framework)
         self._info = {
             'Authors': ['@vexance'],
-            'Description': 'Copies a public EBS snapshot to S3, then download locally',
+            'Description': 'Downloads a public EBS snapshot to disk',
             'Details': 'Leverages ec2:CopySnapshot, ec2:DescribeSnapshots, ebs:ListSnapshotBlocks, and ebs:GetSnapshotBlock to copy a public EBS snapshot, then list and retrieve all blocks of data stored in it. Direct EBS API pricing will impose costs of roughly of $0.01 per 1.5 GB',
             'References': ['https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.copy_snapshot']
         }
@@ -36,7 +36,7 @@ class Module(AWSModule):
 
     @property
     def search_name(self):
-        return f'aws/unauth/{self.name}'
+        return f'aws/util/{self.name}'
 
 
     def copy_ebs_snapshot(self, desc: str, src_id: str, src_reg: str, dest: str) -> str | None:

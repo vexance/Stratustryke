@@ -489,7 +489,7 @@ class Module(AWSModule):
 
     @property
     def search_name(self):
-        return f'aws/authed/{self.name}'
+        return f'aws/util/{self.name}'
 
 
     def validate_options(self) -> tuple:

@@ -24,7 +24,7 @@ class Module(StratustrykeModule):
 
     @property
     def search_name(self) -> str:
-        return f'aws/unauth/{self.name}'
+        return f'aws/enum/unauth/{self.name}'
 
     def validate_options(self) -> tuple:
         valid, msg = super().validate_options()
