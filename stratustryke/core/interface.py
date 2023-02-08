@@ -543,11 +543,20 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
             self.print_line(f'  {args.option_name} => {args.option_value}')
 
     def complete_set(self, text, line, begidx, endidx):
-        completions = [f'{i} ' for i in self.framework.current_module._options.keys() if i.startswith(text.upper())]
-        if 'true'.startswith(text.lower()):
-            completions.append('true')
-        if 'false'.startswith(text.lower()):
-            completions.append('false')
+        completions = []
+        split = line.split()
+        if len(split) < 3: # just 'set ' or 'set blah'
+            completions = [f'{i} ' for i in self.framework.current_module._options.keys() if i.startswith(text.upper())]
+
+        elif len(split) == 3 and split[2].startswith('file:'):
+            if split[2] == 'file:': return []
+            path = split[2][5:]
+            completions = complete_path(path, True, True)
+
+
+        elif len(split) == 3:
+            completions = [opt for opt in ['true', 'false', 'file:'] if opt.startswith(text.lower())]
+
         return completions
 
 
