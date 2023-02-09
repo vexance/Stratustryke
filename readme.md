@@ -12,8 +12,8 @@ user@linux:~: ./stratustryke.py
      /___/\__/_/  \_,_/\__/\_,_/___/\__/_/  \_, /_/\_\__/      
                                            /___/                
 
-     stratustryke v0.1.0a
-     Loaded modules: 14
+     stratustryke v0.1.0b
+     Loaded modules: 16
 
 stratustryke > 
 ~~~

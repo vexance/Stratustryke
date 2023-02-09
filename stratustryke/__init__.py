@@ -4,7 +4,7 @@
 
 from __future__ import unicode_literals
 
-__version__ = '0.1.0a'
+__version__ = '0.1.0b'
 __progname__ = 'stratustryke'
 
 import os
