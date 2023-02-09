@@ -31,10 +31,10 @@ class Module(StratustrykeModule):
             return (valid, msg)
 
         key = self.get_opt('KEYWORD')
-        keywords = key[5:] if key.startswith('file:') else None
-        if keywords != None:
-            if not (Path(keywords).exists() and Path(keywords).is_file()):
-                return (False, 'Cannot find specified keyword file')
+        filename = key[5:] if key.startswith('file:') else None
+        if filename != None:
+            if not (Path(filename).exists() and Path(filename).is_file()):
+                return (False, f'Cannot find keyword file \'{filename}\'')
         
         perms = self.get_opt('MUTATIONS')
         if not (Path(perms).exists() and Path(perms).is_file()):
