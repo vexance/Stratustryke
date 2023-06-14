@@ -193,7 +193,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
 
     def precmd(self, line):
         if self.framework.spooler != None:
-            self.framework.spooler.write(f'{self.prompt}{line}{os.linesep}')
+            with open(self.framework.spooler.absolute(), self.framework.spool_mode) as spooler:
+                spooler.write(f'{self.prompt}{line}{os.linesep}')
         return super().precmd(line)
 
 
@@ -344,8 +345,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         # Add closing quotes here?
         
         if self.framework.spooler != None:
-            self.framework.spooler.close()
             self.framework.spooler = None
+            self.framework.spool_mode = None
 
         try: # Try to copy command history to 'home/<user>/.local/strautsryke/history.txt
             import readline
@@ -603,7 +604,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Text Completion: modules, config, options, info
 
     @stratustryke.core.command.command('Show requested information for modules, configurations, or module options')
-    @stratustryke.core.command.argument('what', choices=('modules', 'config', 'options', 'info'), help = 'Type of information to display')
+    @stratustryke.core.command.argument('what', choices=('modules', 'config', 'options'), help = 'Type of information to display')
     def do_show(self, args):
         ''''Command: 'show <what>' displays information based off what information is requested'''
         headers, rows = [], []
@@ -631,9 +632,6 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
             rows = self.framework.current_module.show_options(masking)
             headers = ['Name', 'Value', 'Required', 'Description']
 
-        elif choice == 'info':
-            return self.do_info(args)
-
         else:
             self.print_line(f'Invalid selection \'{args.choice}\' for show command')
             return
@@ -644,7 +642,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
 
     def complete_show(self, text, line, begidx, endidx):
         '''Text completion for show command'''
-        return [i for i in ['modules', 'config', 'options', 'info'] if i.startswith(text.lower())]
+        return [i for i in ['modules', 'config', 'options'] if i.startswith(text.lower())]
             
 
     # Command: 'config'
@@ -807,8 +805,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     def do_spool(self, args):
         if args.path.lower() == 'off':
             if self.framework.spooler != None:
-                self.framework.spooler.close()
                 self.framework.spooler = None
+                self.framework.spool_mode = None
             
             self.print_status('Spooling of stratustryke output disabled')
         
@@ -831,12 +829,14 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
                 else:
                     self.print_status(f'Appending to file: {path.absolute()}')
 
-            self.print_status(f'Spooling to {path.absolute()}')
             try:
-                self.framework.spooler = open(path, mode)
+                self.framework.spooler = path.absolute()
+                self.framework.spool_mode = mode
+                self.print_status(f'Spooling to {path.absolute()}')
             except Exception as err:
                 self.print_error(f'{err}')
                 self.framework.spooler = None
+                self.framework.spool_mode = None
                 return
 
     def complete_spool(self, text, line, begidx, endidx):
