@@ -1,5 +1,5 @@
 # Author: @vexance
-# Purpose: Handles module management, user configs, and I/O
+# Purpose: Stratustryke framework - handles module management, user configs, and I/O
 #
 
 import importlib
