@@ -22,4 +22,4 @@ FORCE_VALIDATE_OPTIONS = False
 SPOOL_OVERWRITE = False
 DEFAULT_TABLE_FORMAT = 'simple' # list of options available at https://pypi.org/project/tabulate/
 DEFAULT_WORKSPACE = 'default'
-FIREPROX_CRED_ALIAS = 'ol-admin'
+FIREPROX_CRED_ALIAS = 'fireprox'

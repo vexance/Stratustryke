@@ -1,8 +1,14 @@
+# Author: @vexance; adapted from @ustayready from <https://github.com/ustayready/fireprox>
+# Purpose: Class definition for module option parameters
+# Credit: Heavily inspired by @zeroSteiner's Options class for Termineter
+#
+
 import tldextract
 import datetime
 from stratustryke.core.credential import AWSCredential
 
 class FireProx(object):
+    '''Class for creation, listing, and deletion of Fireprox APIs'''
     def __init__(self, cred: AWSCredential, help_msg: str = None) -> None:
         self.help = help_msg
         self.region = cred._default_region
@@ -10,6 +16,7 @@ class FireProx(object):
 
 
     def get_template(self, url: str):
+        '''Insert target URL into fireprox apigateway deployment template. Return final template.'''
         if url[-1] == '/':
             url = url[:-1]
 
@@ -155,6 +162,7 @@ class FireProx(object):
 
 
     def create_api(self, url) -> tuple:
+        '''Creates a fireprox api for the provided target URL.'''
         if not url:
             return (False, 'Target not supplied')
 
@@ -166,36 +174,10 @@ class FireProx(object):
 
         resource_id, proxy_url = self.create_deployment(response['id'])
         return (True, f'({response["id"]}) {response["name"]} => {proxy_url} ({url})')
-
-
-    # Pretty sure this can get axed, commenting out for now to be sure!
-    # def update_api(self, api_id, url):
-    #     if not any([api_id, url]):
-    #         self.error('Please provide a valid API ID and URL end-point')
-
-    #     if url[-1] == '/':
-    #         url = url[:-1]
-
-    #     resource_id = self.get_resource(api_id)
-    #     if resource_id:
-    #         response = self.session.update_integration(
-    #             restApiId=api_id,
-    #             resourceId=resource_id,
-    #             httpMethod='ANY',
-    #             patchOperations=[
-    #                 {
-    #                     'op': 'replace',
-    #                     'path': '/uri',
-    #                     'value': '{}/{}'.format(url, r'{proxy}'),
-    #                 },
-    #             ]
-    #         )
-    #         return response['uri'].replace('/{proxy}', '') == url
-    #     else:
-    #         self.error(f'Unable to update, no valid resource for {api_id}')
             
 
     def delete_api(self, api_id):
+        '''Deletes a fireprox api with the id specified'''
         if not api_id:
             return (False, 'Fireprox API id not supplied')
         
@@ -212,6 +194,7 @@ class FireProx(object):
     
 
     def list_api(self, deleted_api_id=None, silenced=False):
+        '''Lists fireprox APIs within the account'''
         response = self.session.get_rest_apis()
         api_info = []
         for item in response['items']:
@@ -229,6 +212,7 @@ class FireProx(object):
 
 
     def create_deployment(self, api_id):
+        '''Creates the apigateway deployment where the fireprox API will be configured'''
         if not api_id: return (False, 'Valid API id not provided')
 
         response = self.session.create_deployment(
@@ -242,6 +226,7 @@ class FireProx(object):
 
 
     def get_resource(self, api_id):
+        '''Get information regarding fireprox api with the supplied id'''
         if not api_id:
             return (False, 'Valid API id not provided')
         response = self.session.get_resources(restApiId=api_id)
@@ -255,6 +240,7 @@ class FireProx(object):
 
 
     def get_integration(self, api_id):
+        '''Get information regarding the fireprox api with the supplied id'''
         if not api_id: return (False, 'Valid API id not provided')
         
         resource_id = self.get_resource(api_id)
