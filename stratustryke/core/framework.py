@@ -12,6 +12,7 @@ import stratustryke
 from stratustryke.core.credstore import CredentialStoreConnector
 from stratustryke.core.module import StratustrykeModule
 from stratustryke.core.option import Options
+from stratustryke.core.fireprox import FireProx
 import stratustryke.core.modmgr
 import stratustryke.settings
 from termcolor import colored
@@ -49,6 +50,7 @@ class StratustrykeFramework(object):
         self._config.add_boolean('COLORED_OUTPUT', 'Enables color in console output', True, stratustryke.settings.COLORED_OUTPUT)
         self._config.add_boolean('FORCE_VALIDATE_OPTIONS', 'Enables validation checks on module options upon running the module', True, stratustryke.settings.FORCE_VALIDATE_OPTIONS)
         self._config.add_boolean('SPOOL_OVERWRITE', 'Enables spool file overwrite and disables default writing mode (append) for file spooling ops', True, stratustryke.settings.SPOOL_OVERWRITE)
+        self._config.add_string('FIREPROX_CRED_ALIAS', 'Credential alias to use for management of fireprox APIs', True, stratustryke.settings.FIREPROX_CRED_ALIAS)
         self._config.add_string('DEFAULT_TABLE_FORMAT', 'Default outputing format for table output', True, stratustryke.settings.DEFAULT_TABLE_FORMAT)
         self._config.add_string('WORKSPACE', 'Workspace to filter credential objects in the stratustryke sqlite credstore', True, stratustryke.settings.DEFAULT_WORKSPACE)
 
@@ -65,6 +67,15 @@ class StratustrykeFramework(object):
         self.spooler = None # Will hold the I/O handle
         self.spool_mode = None
         self.credentials = CredentialStoreConnector(self, str(stratustryke.core.lib.sqlite_filepath()))
+        
+        fp_alias = self._config.get_opt('FIREPROX_CRED_ALIAS')._value
+        if fp_alias in self.credentials.keys():
+            fp_cred = self.credentials[fp_alias]
+            self.fireprox = FireProx(fp_cred)
+        else:
+            self.print_warning(f'Fireprox manager credential alias \'{fp_alias}\' not found!')
+            self.fireprox = None
+
         self.modules = stratustryke.core.modmgr.ModManager(self, search_dirs)
         self._logger.info(f'Loaded {len(self.modules)} modules into the framework')
 

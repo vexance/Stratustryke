@@ -6,3 +6,5 @@ pathlib
 termcolor
 tabulate
 requests
+tldextract
+tzlocal
