@@ -5,3 +5,4 @@
 *lib/
 pyvenv.cfg
 lib64
+stratustryke/modules/custom/*
