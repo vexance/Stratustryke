@@ -84,17 +84,20 @@ class Module(AWSModule):
             session = creds.session()
             client = session.client('s3')
 
-            if prefix:
+            if prefix != None:
+                print('prefix')
                 res = client.head_object(Bucket=bucket, Key=prefix)
                 return True
             
             else:
-                res = client.head_object(Bucket=bucket)
+                res = client.list_objects_v2(Bucket=bucket)
                 return True
 
         except Exception as err:
             if not (err.response.get('Error', {}).get('Code', "999") == '403'):
                 raise StratustrykeException(f'{err}')
+            if 'ListObjectsV2' in f'{err}' and 'Access Denied' in f'{err}':
+                pass
 
         return False
 
@@ -126,8 +129,10 @@ class Module(AWSModule):
                     attempt = f'{builder}{digit}'
                     policy = self.policy(attempt)
                     role_creds = self.assume_role(role_arn, policy)
-                    success = self.attempt_access(role_creds)
-                        
+                    try:
+                        success = self.attempt_access(role_creds)
+                    except Exception as err:
+                        continue
                     if success:
                         builder = attempt
                         self.framework.print_status(f'Found digit: [{iteration+1}/12]')
