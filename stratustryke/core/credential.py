@@ -4,6 +4,7 @@ from stratustryke.core.lib import StratustrykeException
 from stratustryke.settings import AWS_DEFAULT_REGION
 from stratustryke.settings import DEFAULT_WORKSPACE
 from re import match as regex_match
+from requests_auth_aws_sigv4 import AWSSigV4
 
 
 class Credential:
@@ -116,9 +117,6 @@ class AWSCredential(CloudCredential):
 
     def session(self, region = None) -> boto3.Session:
         '''Returns a botocore session for the creds'''
-        if self._session:
-            return self._session
-
         session_region = region if (region != None) else self._default_region
         # Create botocore session with either specified or default region
         try:
@@ -146,15 +144,59 @@ class AWSCredential(CloudCredential):
         return True
     
 
-    def assume_role(self, role: str) -> dict:
+    def assume_role(self, role: str, ext_id: str = '', policy: str = None, duration: int = 15,
+                    region: str = None, session_name: str = 'stratustryke', workspace: str = DEFAULT_WORKSPACE,
+                    alias: str = 'AssumedRoleCred') -> CloudCredential:
         '''Performs an STS assume-role call, tuple<bool, CloudCredential> with success status, assumed role credentials.
-        :param: role: Can be either just the role name (will use current account id to build the target role ARN), or a full role ARN
+        :param role: Can be either just the role name (will use current account id to build the target role ARN), or a full role ARN
+        :param ext_id: String external id if necessary to assume the role
+        :param policy: String (or JSON) policy to use as inline session policy to restrict permissions
+        :param duration: Number of minutes to assume the role for [default: 15]
+        :param region: Default AWS region for the new AWSCredential object
+        :param session_name: String name for the assumed role session [default: stratustryke]
+        :return: AWSCredential object for the assumed role creds
         '''
         if not regex_match('^arn:aws:iam::[0-9]{12}:role/.*$', role):
             role = f'arn:aws:iam::{self._account_id}:role/{role}'
-        # Todo: Assume role, return status + credential object
 
-        session = self.session()
+        # Check / fix args
+        if region == None: region = self._default_region # use current default if not supplied
+        duration = duration * 60 # Cast minutes to seconds
+        #if ext_id == '': ext_id = None
+        if isinstance(policy, dict): policy = str(policy).replace('\'', '\"')
+        if policy == None: # If policy not supplied, pass one allowing *:*
+            policy = '{"Version": "2012-10-17", "Statement": {"Effect": "Allow", "Action": "*", "Resource": "*"} }'
+
+        try: 
+            session = self.session()
+            client = session.client('sts')
+            res = client.assume_role(RoleSessionName=session_name, RoleArn=role, DurationSeconds=duration, ExternalId=ext_id, Policy=policy)
+
+            access_key = res.get('Credentials', {}).get('AccessKeyId', False)
+            secret_key = res.get('Credentials', {}).get('SecretAccessKey', False)
+            token = res.get('Credentials', {}).get('SessionToken', False)
+
+            if not all([access_key, secret_key, token]):
+                raise StratustrykeException(f'Did not retrieve all of aws_acess_key_id, aws_secret_access_key, aws_session_token')
+
+            return AWSCredential(alias, access_key=access_key, secret_key=secret_key, session_token=token,
+                                 default_region=region, workspace=workspace)
+        
+        except Exception as err:
+            raise StratustrykeException(f'Exception thrown performing sts:AssumeRole for {role}\n{err}')
+        
+
+    def sigv4(self, service: str, region: str = None) -> AWSSigV4:
+        '''Returns and AWSSigV4 object for the credential that can be used to sign HTTP requests'''
+        if region == None: region = self._default_region
+        return AWSSigV4(
+            service,
+            region = region, 
+            aws_access_key_id = self._access_key_id,
+            aws_secret_access_key = self._secret_key,
+            aws_session_token = self._session_token
+        )
+        
 
         
 class AzureCredential(CloudCredential):
