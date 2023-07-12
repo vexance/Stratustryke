@@ -43,8 +43,9 @@ class Module(StratustrykeModule):
         return (valid, None)
 
 
-    def attempt_login(self, user: str, pwd: str) -> tuple[int, dict | None]:
-        '''Perform a login attempt against the AWS web console'''
+    def attempt_login(self, user: str, pwd: str) -> tuple:
+        '''Perform a login attempt against the AWS web console
+        :return: tuple[int, dict | None]'''
         acc_id = self.get_opt('ACCOUNT_ID')
         session = Session()
 

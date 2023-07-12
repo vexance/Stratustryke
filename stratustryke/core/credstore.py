@@ -168,8 +168,9 @@ class CredentialStoreConnector(collections.abc.Mapping):
         return True
 
 
-    def list_aliases(self, workspace: str = None) -> list[str]:
-        '''Returns credential aliases for a given workspace'''
+    def list_aliases(self, workspace: str = None) -> list:
+        '''Returns credential aliases for a given workspace.
+        :return: list[str]'''
         if workspace == None:
             return [str(key) for key in self._creds.keys()]
 

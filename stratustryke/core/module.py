@@ -39,7 +39,8 @@ class StratustrykeModule(object):
     def search_name(self) -> str:
         return f'generic/{self.name}'
 
-    def show_options(self, mask: bool = False) -> list[list[str]]:
+    def show_options(self, mask: bool = False) -> list:
+        ''':return: list[list[str]] containing rows of column values'''
         return self._options.show_options(mask)
 
 
@@ -50,7 +51,8 @@ class StratustrykeModule(object):
         return self._options.validate_options()
 
 
-    def load_strings(self, file: str) -> list[str] | None:
+    def load_strings(self, file: str) -> list:
+        ''':return: list[str] | None'''
         try:
             with open(file, 'r') as handle:
                 return [line.strip(f'{linesep}') for line in handle.readlines()]
