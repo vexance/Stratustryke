@@ -131,15 +131,12 @@ class AWSModule(StratustrykeModule):
 
 
     def get_cred(self, region: str = None):
-        if self._cred == None:
-            access_key = self.get_opt('AUTH_ACCESS_KEY_ID')
-            secret = self.get_opt('AUTH_SECRET_KEY')
-            token = self.get_opt('AUTH_SESSION_TOKEN')
-            cred_region = region if (region != None) else self.get_opt('AWS_REGION')
+        access_key = self.get_opt('AUTH_ACCESS_KEY_ID')
+        secret = self.get_opt('AUTH_SECRET_KEY')
+        token = self.get_opt('AUTH_SESSION_TOKEN')
+        cred_region = region if (region != None) else self.get_opt('AWS_REGION')
 
-            self._cred = stratustryke.core.credential.AWSCredential(f'{self.name}', access_key=access_key, secret_key=secret, session_token=token, default_region=cred_region)
-
-        return self._cred
+        return stratustryke.core.credential.AWSCredential(f'{self.name}', access_key=access_key, secret_key=secret, session_token=token, default_region=cred_region)
 
 
     @property

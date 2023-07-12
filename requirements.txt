@@ -8,3 +8,4 @@ tabulate
 requests
 tldextract
 tzlocal
+requests_auth_aws_sigv4
