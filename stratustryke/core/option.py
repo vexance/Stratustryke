@@ -95,9 +95,9 @@ class Options:
         self.options : dict = {}
 
     # Option / option value getters
-    def get_opt(self, name: str) -> Option | None:
+    def get_opt(self, name: str) -> Option:
         '''Return the instance of a designated Option
-        :rtype: <Option> instance of the Option object'''
+        :return: Option | None : instance of the Option object'''
         name = name.upper()
         return self.options.get(name, None)
 
@@ -125,7 +125,8 @@ class Options:
         return options
 
 
-    def keys(self) -> list[str]:
+    def keys(self) -> list:
+        ''':return: list[str]'''
         return [key for key in self.options.keys()]
 
 
@@ -150,9 +151,9 @@ class Options:
         return (True, None)
 
 
-    def show_options(self, mask: bool = False) -> list[list[str]]:
+    def show_options(self, mask: bool = False) -> list:
         '''Returns options and information for the module. This need not be overriden by child classes
-        :rtype: list[list[str]]'''
+        :return: list[list[str]]'''
         rows = []
         max_val_chars = 76 # display at most 75 chars for opt values
 

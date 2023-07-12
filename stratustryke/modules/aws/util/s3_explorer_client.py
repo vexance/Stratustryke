@@ -73,13 +73,15 @@ class S3Bucket():
         return list(self._contents)
 
     @property
-    def directories(self) -> list[str]:
+    def directories(self) -> list:
+        ''':return: list[str]'''
         return list(set([obj.dir for obj in self.contents]))
 
     def add_obj(self, obj: S3Object):
         self._contents.add(obj)
 
-    def dirs_in(self, search_dir: str) -> list[S3Object]:
+    def dirs_in(self, search_dir: str) -> list:
+        ''':return: list[S3Object]'''
         objects = set()
         directories = [obj for obj in self.directories if obj.startswith(search_dir)]
         for entry in directories:
@@ -91,12 +93,14 @@ class S3Bucket():
 
         return sorted(list(objects), key = lambda obj: obj.name)
 
-    def objects_in(self, search_dir: str) -> list[S3Object]:
+    def objects_in(self, search_dir: str) -> list:
+        ''':return: list[S3Object]'''
         objects = set([obj for obj in self.contents if obj.dir == f'{search_dir}/'])
         return sorted(list(objects), key = lambda obj: obj.name)
 
-    def ls_dir(self, search_dir: str) -> list[S3Object]:
-        '''Return list of objects residing in a specified directory (prefix)'''
+    def ls_dir(self, search_dir: str) -> list:
+        '''Return list of objects residing in a specified directory (prefix)
+        :return: list[S3Object]'''
         # objects = set([obj for obj in self.contents if obj.dir == f'{search_dir}/'])
         # directories = [obj for obj in self.directories if obj.startswith(search_dir)]
         # for entry in directories:
@@ -109,7 +113,8 @@ class S3Bucket():
         objs = self.objects_in(search_dir)
         return dirs + objs
     
-    def all_keys(self) -> list[str]:
+    def all_keys(self) -> list:
+        ''':return: list[str]'''
         return [obj._key for obj in self.contents]
 
 
@@ -198,7 +203,8 @@ class S3ClientExplorer(stratustryke.core.command.Command):
 
         return False
 
-    def get_discovered_objects(self, bucket: str, prefix: str = '/') -> list[dict]:
+    def get_discovered_objects(self, bucket: str, prefix: str = '/') -> list:
+        ''':return: list[dict]'''
         objects = self.discovered.get(bucket, {}).get('Contents', [])
         return [obj for obj in objects if obj['Key'].startswith(prefix)]
 
