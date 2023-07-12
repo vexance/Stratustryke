@@ -1,5 +1,5 @@
 # Author: @vexance
-# Purpose: Handles module management, user configs, and I/O
+# Purpose: Stratustryke frameowrk - handles module management, user configs, and I/O
 #
 
 import importlib
@@ -12,6 +12,7 @@ import stratustryke
 from stratustryke.core.credstore import CredentialStoreConnector
 from stratustryke.core.module import StratustrykeModule
 from stratustryke.core.option import Options
+from stratustryke.core.fireprox import FireProx
 import stratustryke.core.modmgr
 import stratustryke.settings
 from termcolor import colored
@@ -49,6 +50,7 @@ class StratustrykeFramework(object):
         self._config.add_boolean('COLORED_OUTPUT', 'Enables color in console output', True, stratustryke.settings.COLORED_OUTPUT)
         self._config.add_boolean('FORCE_VALIDATE_OPTIONS', 'Enables validation checks on module options upon running the module', True, stratustryke.settings.FORCE_VALIDATE_OPTIONS)
         self._config.add_boolean('SPOOL_OVERWRITE', 'Enables spool file overwrite and disables default writing mode (append) for file spooling ops', True, stratustryke.settings.SPOOL_OVERWRITE)
+        self._config.add_string('FIREPROX_CRED_ALIAS', 'Credential alias to use for management of fireprox APIs', True, stratustryke.settings.FIREPROX_CRED_ALIAS)
         self._config.add_string('DEFAULT_TABLE_FORMAT', 'Default outputing format for table output', True, stratustryke.settings.DEFAULT_TABLE_FORMAT)
         self._config.add_string('WORKSPACE', 'Workspace to filter credential objects in the stratustryke sqlite credstore', True, stratustryke.settings.DEFAULT_WORKSPACE)
 
@@ -63,7 +65,17 @@ class StratustrykeFramework(object):
                 search_dirs.append(path)
 
         self.spooler = None # Will hold the I/O handle
+        self.spool_mode = None
         self.credentials = CredentialStoreConnector(self, str(stratustryke.core.lib.sqlite_filepath()))
+        
+        fp_alias = self._config.get_opt('FIREPROX_CRED_ALIAS')._value
+        if fp_alias in self.credentials.keys():
+            fp_cred = self.credentials[fp_alias]
+            self.fireprox = FireProx(fp_cred)
+        else:
+            self.print_warning(f'Fireprox manager credential alias \'{fp_alias}\' not found!')
+            self.fireprox = None
+
         self.modules = stratustryke.core.modmgr.ModManager(self, search_dirs)
         self._logger.info(f'Loaded {len(self.modules)} modules into the framework')
 
@@ -74,8 +86,9 @@ class StratustrykeFramework(object):
 
     def spool_message(self, msg: str) -> None:
         if self.spooler != None:
-            self.spooler.write(msg)
-
+            with open(self.spooler.absolute(), self.spool_mode) as spooler:
+                spooler.write(msg)
+                
 
     # === various logging and print utility methods === #
     def print_error(self, msg: str) -> None:
@@ -227,7 +240,13 @@ class StratustrykeFramework(object):
         return res
 
 
-    def print_table(self, rows: list[list[str]], headers: list[str], prefix: str = None, table_format: str = None):
+    def print_table(self, rows: list, headers: list, prefix: str = '  ', table_format: str = None):
+        '''
+        Prints a table to the framework
+        :param rows: list[list[str]] list of rows containing a list of columns
+        :param headers: list[str] containing column header names
+        :param prefix: string to include before each line [default two spaces]
+        :param table_format: type of table to generate'''
         table_format = self._config.get_opt('DEFAULT_TABLE_FORMAT') if (table_format == None) else table_format
         table_text = tabulate.tabulate(rows, headers=headers, tablefmt=table_format)
         if prefix:

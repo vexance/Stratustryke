@@ -47,7 +47,11 @@ class Module(StratustrykeModule):
         return (True, None)
 
 
-    def permutate(self, keywords: list[str], permutations: list[str]) -> list[str]:
+    def permutate(self, keywords: list, permutations: list) -> list:
+        '''
+        :param keywords: list[str] keywords to permutate
+        :param permutations: list[str] permutation to apply to keywords
+        :return: list[str] permutated keywords'''
         out = []
         for word in keywords:
             out.append(word)

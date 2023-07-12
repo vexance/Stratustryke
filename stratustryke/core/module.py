@@ -39,7 +39,8 @@ class StratustrykeModule(object):
     def search_name(self) -> str:
         return f'generic/{self.name}'
 
-    def show_options(self, mask: bool = False) -> list[list[str]]:
+    def show_options(self, mask: bool = False) -> list:
+        ''':return: list[list[str]] containing rows of column values'''
         return self._options.show_options(mask)
 
 
@@ -50,7 +51,8 @@ class StratustrykeModule(object):
         return self._options.validate_options()
 
 
-    def load_strings(self, file: str) -> list[str] | None:
+    def load_strings(self, file: str) -> list:
+        ''':return: list[str] | None'''
         try:
             with open(file, 'r') as handle:
                 return [line.strip(f'{linesep}') for line in handle.readlines()]
@@ -131,15 +133,12 @@ class AWSModule(StratustrykeModule):
 
 
     def get_cred(self, region: str = None):
-        if self._cred == None:
-            access_key = self.get_opt('AUTH_ACCESS_KEY_ID')
-            secret = self.get_opt('AUTH_SECRET_KEY')
-            token = self.get_opt('AUTH_SESSION_TOKEN')
-            cred_region = region if (region != None) else self.get_opt('AWS_REGION')
+        access_key = self.get_opt('AUTH_ACCESS_KEY_ID')
+        secret = self.get_opt('AUTH_SECRET_KEY')
+        token = self.get_opt('AUTH_SESSION_TOKEN')
+        cred_region = region if (region != None) else self.get_opt('AWS_REGION')
 
-            self._cred = stratustryke.core.credential.AWSCredential(f'{self.name}', access_key=access_key, secret_key=secret, session_token=token, default_region=cred_region)
-
-        return self._cred
+        return stratustryke.core.credential.AWSCredential(f'{self.name}', access_key=access_key, secret_key=secret, session_token=token, default_region=cred_region)
 
 
     @property

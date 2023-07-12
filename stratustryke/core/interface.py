@@ -5,7 +5,6 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 from pathlib import Path
-import typing
 import stratustryke
 import stratustryke.core.command
 import stratustryke.core.framework
@@ -13,6 +12,7 @@ import stratustryke.settings
 import stratustryke.core.lib
 import stratustryke.core.credential
 from termcolor import colored
+from time import sleep
 import os
 import logging
 
@@ -193,7 +193,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
 
     def precmd(self, line):
         if self.framework.spooler != None:
-            self.framework.spooler.write(f'{self.prompt}{line}{os.linesep}')
+            with open(self.framework.spooler.absolute(), self.framework.spool_mode) as spooler:
+                spooler.write(f'{self.prompt}{line}{os.linesep}')
         return super().precmd(line)
 
 
@@ -344,8 +345,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         # Add closing quotes here?
         
         if self.framework.spooler != None:
-            self.framework.spooler.close()
             self.framework.spooler = None
+            self.framework.spool_mode = None
 
         try: # Try to copy command history to 'home/<user>/.local/strautsryke/history.txt
             import readline
@@ -547,7 +548,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         split = line.split()
         if len(split) < 3: # just 'set ' or 'set blah'
             completions = [f'{i} ' for i in self.framework.current_module._options.keys() if i.startswith(text.upper())]
-
+            
         elif len(split) == 3 and split[2].startswith('file:'):
             if split[2] == 'file:': return []
             path = split[2][5:]
@@ -603,7 +604,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Text Completion: modules, config, options, info
 
     @stratustryke.core.command.command('Show requested information for modules, configurations, or module options')
-    @stratustryke.core.command.argument('what', choices=('modules', 'config', 'options', 'info'), help = 'Type of information to display')
+    @stratustryke.core.command.argument('what', choices=('modules', 'config', 'options'), help = 'Type of information to display')
     def do_show(self, args):
         ''''Command: 'show <what>' displays information based off what information is requested'''
         headers, rows = [], []
@@ -631,9 +632,6 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
             rows = self.framework.current_module.show_options(masking)
             headers = ['Name', 'Value', 'Required', 'Description']
 
-        elif choice == 'info':
-            return self.do_info(args)
-
         else:
             self.print_line(f'Invalid selection \'{args.choice}\' for show command')
             return
@@ -644,7 +642,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
 
     def complete_show(self, text, line, begidx, endidx):
         '''Text completion for show command'''
-        return [i for i in ['modules', 'config', 'options', 'info'] if i.startswith(text.lower())]
+        return [i for i in ['modules', 'config', 'options'] if i.startswith(text.lower())]
             
 
     # Command: 'config'
@@ -745,7 +743,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
                 rows.append([cred_type, entry])
             
             self.print_line(f'Listing credentials stored for the current workspace...{os.linesep}')
-            self.framework.print_table(rows, headers)
+            self.framework.print_table(rows, headers, prefix='  ')
             self.print_line('')
             return
         
@@ -807,8 +805,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     def do_spool(self, args):
         if args.path.lower() == 'off':
             if self.framework.spooler != None:
-                self.framework.spooler.close()
                 self.framework.spooler = None
+                self.framework.spool_mode = None
             
             self.print_status('Spooling of stratustryke output disabled')
         
@@ -831,12 +829,14 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
                 else:
                     self.print_status(f'Appending to file: {path.absolute()}')
 
-            self.print_status(f'Spooling to {path.absolute()}')
             try:
-                self.framework.spooler = open(path, mode)
+                self.framework.spooler = path.absolute()
+                self.framework.spool_mode = mode
+                self.print_status(f'Spooling to {path.absolute()}')
             except Exception as err:
                 self.print_error(f'{err}')
                 self.framework.spooler = None
+                self.framework.spool_mode = None
                 return
 
     def complete_spool(self, text, line, begidx, endidx):
@@ -878,3 +878,74 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
             res = None
 
         
+    # Command: 'fireprox'
+    # Action: CRUD operations upon fireprox APIs
+    # Syntax: 'fireprox create <URL>', 'fireprox delete <alias>', 'fireprox clean', 'fireprox list'
+    
+    @stratustryke.core.command.command('Create, list, and delete fireprox APIs (uses access keys in \'default\' CLI profile)')
+    @stratustryke.core.command.argument('action', choices=('create', 'list', 'delete', 'clean'), help = 'Fireprox management action to take')
+    @stratustryke.core.command.argument('target', nargs='?', help = 'Target URL or firprox API id (required for create & delete commands)')
+
+    def do_fireprox(self, args):
+        if args.action.lower() in ['create', 'delete']:
+            if not args.target:
+                return self.framework.print_error('Target URL or API id required')
+            
+        if args.action == 'create':
+            try:
+                status, msg = self.framework.fireprox.create_api(args.target)
+            except Exception as err:
+                self.framework.print_error(f'Error creating fireprox API for \'{args.target}\'')
+                return
+            
+            self.framework.print_status(msg)
+            return None
+        
+        if args.action == 'delete':
+            try:
+                status, msg = self.framework.fireprox.delete_api(args.target)
+                self.framework.print_status(f'Removed fireprox API \'{args.target}\'')
+            except Exception as err:
+                self.framework.print_error(f'{err}')
+                return
+            
+        if args.action == 'list':
+            try:
+                api_info = self.framework.fireprox.list_api()
+                rows = []
+                for api in api_info:
+                    rows.append([api["id"], api["proxy_target"], api["proxy_endpoint"]])
+                    #self.framework.print_status(f'({api["id"]}) => {api["proxy_target"]} ({api["proxy_endpoint"]})')
+                self.framework.print_line('')
+                self.framework.print_table(rows, ['Fireprox Id', 'Target', 'Fireprox Endpoint'], prefix='  ')
+                self.framework.print_line('')
+
+            except Exception as err:
+                self.framework.print_error(f'{err}')
+                return None
+            
+        if args.action == 'clean':
+            try:
+                api_list = [api["id"] for api in self.framework.fireprox.list_api()]
+                if len(api_list) == 0:
+                    self.framework.print_status('No fireprox APIs found')
+                    return
+            except Exception as err:
+                self.framework.print_error('Error listing fireprox APIs for cleaning')
+                return
+            
+            try:
+                for api in api_list:
+                    status, msg = self.framework.fireprox.delete_api(api)
+                    self.framework.print_status(f'Removed fireprox API: \'{api}\'')
+                    sleep(3)
+                self.framework.print_status(f'Removed all fireprox APIs')
+            except Exception as err:
+                self.framework.print_error(f'{err}')
+                return
+            
+        return None # End do_fireprox()
+            
+    
+    def complete_fireprox(self, text, line, begidx, endidx):
+        return [i for i in ['create', 'list', 'delete', 'clean'] if i.startswith(text.lower())]

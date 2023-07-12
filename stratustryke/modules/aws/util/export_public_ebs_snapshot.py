@@ -39,8 +39,9 @@ class Module(AWSModule):
         return f'aws/util/{self.name}'
 
 
-    def copy_ebs_snapshot(self, desc: str, src_id: str, src_reg: str, dest: str) -> str | None:
-        '''Queue the copy of a snapshot in AWS (ec2:CopySnapshot), return ID of the copy or NoneType'''
+    def copy_ebs_snapshot(self, desc: str, src_id: str, src_reg: str, dest: str) -> str:
+        '''Queue the copy of a snapshot in AWS (ec2:CopySnapshot), return ID of the copy or NoneType
+        :return: str | None'''
         cred = self.get_cred()
         try:
             session = cred.session(region=src_reg)
@@ -58,7 +59,7 @@ class Module(AWSModule):
         return copy_id
 
 
-    def verify_copy_completion(self, copy_id: str, src_id: str) -> bool | None:
+    def verify_copy_completion(self, copy_id: str, src_id: str) -> bool:
         '''Perform ec2:DescribeSnapshots until response comes back with state 'completed' '''
         cred = self.get_cred()
         try:
@@ -85,8 +86,9 @@ class Module(AWSModule):
         return True
 
 
-    def list_blocks(self, copy_id: str) -> list | None:
-        '''Obtain list of snapshot block indices and block tokens via ebs:ListSnapshotBlocks'''
+    def list_blocks(self, copy_id: str) -> list:
+        '''Obtain list of snapshot block indices and block tokens via ebs:ListSnapshotBlocks
+        :return: list | None'''
         cred = self.get_cred()
         blocks = []
 
@@ -110,8 +112,9 @@ class Module(AWSModule):
         return blocks
 
 
-    def export_snapshot(self, copy_id: str, out: Path, blocks: list) -> bool | None:
-        '''Download each block from a snapshot via ebs:GetSnapshotBlock'''
+    def export_snapshot(self, copy_id: str, out: Path, blocks: list) -> bool:
+        '''Download each block from a snapshot via ebs:GetSnapshotBlock
+        :return: bool | None'''
         cred = self.get_cred()
 
         try:
@@ -145,8 +148,9 @@ class Module(AWSModule):
         return True
 
 
-    def cleanup(self, copy_id: str) -> bool | None:
-        '''Remove copy of original snapshot with ec2:DeleteSnapshot'''
+    def cleanup(self, copy_id: str) -> bool:
+        '''Remove copy of original snapshot with ec2:DeleteSnapshot
+        :return: bool | None'''
         # Delete the copy of the snapshot
         cred = self.get_cred()
         try:

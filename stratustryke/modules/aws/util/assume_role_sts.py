@@ -29,34 +29,17 @@ class Module(AWSModule):
         workspace = self.get_opt('WORKSPACE')
         arn = self.get_opt('ROLE_ARN')
         ext_id = self.get_opt('EXTERNAL_ID')
-        duration = self.get_opt('DURATION') * 60 # API requires duration in seconds
+        duration = self.get_opt('DURATION') # * 60 # API requires duration in seconds
         session_name = self.get_opt('SESSION_NAME')
+        region = self.get_opt('AWS_REGION')
 
 
         try:
-            session = cred.session()
-            client = session.client('sts')
-
-            if ext_id == None or ext_id == '': # No external id
-                res = client.assume_role(RoleSessionName=f'{session_name}', RoleArn=arn, DurationSeconds=duration)
-
-            else: # External Id was specified
-                res = client.assume_role(RoleSessionName=f'{session_name}', RoleArn=arn, DurationSeconds=duration, ExternalId=ext_id)
-
-            assumed_creds = res.get('Credentials', {})
-            access_key = assumed_creds.get('AccessKeyId', False)
-            secret_key = assumed_creds.get('SecretAccessKey', False)
-            token = assumed_creds.get('SessionToken', False)
-
-            if not all([access_key, secret_key, token]):
-                raise StratustrykeException(f'Error performing sts:AssumeRole for ARN: {arn}')
-
-            else:
-                role_session_arn = res.get('AssumedRoleUser', {}).get('Arn')
-                self.framework.print_success(f'Retrieved role session: {role_session_arn}')
-                assumed = AWSCredential(alias=alias, workspace=workspace, access_key=access_key, secret_key=secret_key, session_token=token)
-                self.framework.credentials.store_credential(assumed)
-                return True
+            assumed_role_cred = cred.assume_role(arn, ext_id=ext_id, duration=duration, region=region,
+                                                 session_name=session_name, workspace=workspace, alias=alias)
+            
+            self.framework.credentials.store_credential(assumed_role_cred)
+            return True
 
         except Exception as err:
             self.framework.print_failure(f'{err}')
