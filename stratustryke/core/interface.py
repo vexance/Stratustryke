@@ -562,6 +562,58 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         return completions
 
 
+    # Command: 'paste'
+    # Action: Serves as an alternative to 'set' but supports multi-line input (typically for file vars). Receives input until a control character is received (CTRL-C)
+    # Syntax: 'paste <option-name>'
+    # Text Completion: Options for the current module
+
+    @stratustryke.core.command.command('Set the value for a module\'s string-type option while supporting multi-line input. Prefixes the input with \'paste:\' and relies on the module to handle this properly')
+    @stratustryke.core.command.argument('option_name', metavar='option', help = 'Name of option to paste value for')
+    def do_paste(self, args):
+        if self.framework.current_module: # get options for current module
+            opts = self.framework.current_module._options
+            opt_names = self.framework.current_module._options.keys()
+        else:
+            self.print_line('No module currently in use')
+            return
+
+        # Make sure the opt is one of the module's options
+        if args.option_name.upper() not in opt_names:
+            self.print_line(f'Unknown option: {args.option_name}')
+            return
+        
+        # Now receive the paste input
+        self.framework.print_status(f'Receiving paste for {args.option_name.upper()}; Enter ^C to quit')
+        paste = 'paste:'
+        try:
+            while True:
+                line = input()
+                paste += f'{line}\\n'
+        except KeyboardInterrupt:
+            self.framework.print_status(f'Stopped receiving paste value')
+        except Exception as err:
+            self.framework.print_error(f'Exception thrown during paste command: {err}')
+            return
+        
+        # Now try to set the value with the 'paste:' prefix
+        try:
+            success = opts.set_opt(args.option_name, paste)
+        except TypeError as err:
+            self.print_line(f'Invalid data type for \'{args.option_name}\'')
+            self._logger.error(f'Invalid data type for \'{args.option_name}\'')
+            return
+        
+        if success:
+            length = len(paste) if (len(paste) < 20) else 20
+            suffix = '' if (length < 20) else '...'
+            self.print_status(f'  {args.option_name} => {paste[0:length]}{suffix}')
+
+        return
+    
+    def complete_paste(self, text, line, begidx, endidx):
+        return [f'{i} ' for i in self.framework.current_module._options.keys() if i.startswith(text.upper())]
+
+
     # Command: 'options'
     # Action: Displays options for the current or specified module
     # Syntax: 'options', 'options <module>'
@@ -826,7 +878,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
 
             if access_key.startswith('AKIA'): session_token = None
             else:
-                session_token = input('  AWS Session Token []: ')
+                session_token = input('  AWS Session Token [None]: ')
                 self.framework.spool_message(f'  AWS Session Token: {session_token}{os.linesep}')
             
             region = input(f'  Default AWS Region [{stratustryke.settings.AWS_DEFAULT_REGION}]: ')
@@ -852,6 +904,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
             completions.extend([i for i in ['aws', 'azure', 'gcp', 'generic'] if i.startswith(text.lower())])
 
         return completions
+
 
     # Command: 'spool'
     # Action: Enables or disables spooling of output to a file
@@ -902,6 +955,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         if 'off'.startswith(text):
             completions.append('off')
         return completions
+
 
     # Command: 'run'
     # Action: Runs the current module with the option values specified
