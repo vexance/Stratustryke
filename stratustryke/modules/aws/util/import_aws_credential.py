@@ -14,9 +14,7 @@ class Module(AWSModule):
         }
         self._options.add_string('ALIAS', 'Alias name for the credential', True)
         self._options.add_string('WORKSPACE', 'Workspace to associate with the credential', True, default=self.framework._config.get_val('WORKSPACE'))
-        self._options.add_string('ACCOUNT_ID', '12 digit AWS account id', False, sensitive=True, regex='^[0-9]{12}$')
-        self._options.add_string('ARN', 'Amazon resource name for the credential', False, sensitive=True)
-        self._options.add_string('DEFAULT_REGION', 'Default AWS region for the credential\'s sessions', False, AWS_DEFAULT_REGION)
+        self._options.set_opt('AWS_REGION', AWS_DEFAULT_REGION)
 
 
     @property
@@ -28,12 +26,15 @@ class Module(AWSModule):
         secret_key = self.get_opt('AUTH_SECRET_KEY')
         session_token = self.get_opt('AUTH_SESSION_TOKEN')
         alias = self.get_opt('ALIAS')
-        acc_id = self.get_opt('ACCOUNT_ID')
-        arn = self.get_opt('ARN')
-        region = self.get_opt('DEFAULT_REGION')
+        region = self.get_opt('AWS_REGION')
         workspace = self.get_opt('WORKSPACE')
 
-        cred = AWSCredential(alias, workspace, False, acc_id, access_key, access_key, secret_key, session_token, region, arn)
+        if region == None or region == '':
+            region = AWS_DEFAULT_REGION
+
+        # First None val passed is for account id (to be deprecated in place of a property derived from GetCallerIdentity)
+        # Second None val is for ARN (also to be deprecated and replaced with property derived from GetCallerIdentity)
+        cred = AWSCredential(alias, workspace, False, None, access_key, access_key, secret_key, session_token, region, None)
         self.framework.credentials.store_credential(cred)
 
         return True
