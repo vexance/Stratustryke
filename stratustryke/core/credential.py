@@ -144,7 +144,7 @@ class AWSCredential(CloudCredential):
         return True
     
 
-    def assume_role(self, role: str, ext_id: str = '', policy: str = None, duration: int = 15,
+    def assume_role(self, role: str, ext_id: str = 'stratustryke', policy: str = None, duration: int = 15,
                     region: str = None, session_name: str = 'stratustryke', workspace: str = DEFAULT_WORKSPACE,
                     alias: str = 'AssumedRoleCred') -> CloudCredential:
         '''Performs an STS assume-role call, tuple<bool, CloudCredential> with success status, assumed role credentials.
@@ -162,7 +162,7 @@ class AWSCredential(CloudCredential):
         # Check / fix args
         if region == None: region = self._default_region # use current default if not supplied
         duration = duration * 60 # Cast minutes to seconds
-        #if ext_id == '': ext_id = None
+
         if isinstance(policy, dict): policy = str(policy).replace('\'', '\"')
         if policy == None: # If policy not supplied, pass one allowing *:*
             policy = '{"Version": "2012-10-17", "Statement": {"Effect": "Allow", "Action": "*", "Resource": "*"} }'
