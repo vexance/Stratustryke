@@ -151,17 +151,17 @@ class Options:
         return (True, None)
 
 
-    def show_options(self, mask: bool = False) -> list:
+    def show_options(self, mask: bool = False, truncate: bool = True) -> list:
         '''Returns options and information for the module. This need not be overriden by child classes
         :return: list[list[str]]'''
         rows = []
-        max_val_chars = 76 # display at most 75 chars for opt values
+        max_val_chars = 56 if truncate else 999999999 # Show maz of 56 chars if truncation enabled (else 1B chars)
 
         for opt in self.get_all():
             required = 'True' if opt._is_required else 'False'
 
             org = opt.masked() if (mask and opt._sensitive) else opt.str_val() 
-            value = org if (len(org) < max_val_chars) else f'{org[0:35]}.....{org[-35:]}'
+            value = org if (len(org) < max_val_chars) else f'{org[0:25]}.....{org[-25:]}'
 
             rows.append([opt._name, value, required, opt._desc])
 

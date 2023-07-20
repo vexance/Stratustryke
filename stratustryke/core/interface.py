@@ -433,7 +433,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         self.print_line('  Module options:')
         self.print_line('')
         masking = self.framework._config.get_val('MASK_SENSITIVE')
-        rows = mod.show_options(masking)
+        truncating = self.framework._config.get_val('TRUNCATE_OPTIONS')
+        rows = mod.show_options(masking, truncating)
         headers = ['Module Name', 'Value', 'Required', 'Description']
         self.framework.print_table(rows, headers, '  ')
 
@@ -561,6 +562,58 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         return completions
 
 
+    # Command: 'paste'
+    # Action: Serves as an alternative to 'set' but supports multi-line input (typically for file vars). Receives input until a control character is received (CTRL-C)
+    # Syntax: 'paste <option-name>'
+    # Text Completion: Options for the current module
+
+    @stratustryke.core.command.command('Set the value for a module\'s string-type option while supporting multi-line input. Prefixes the input with \'paste:\' and relies on the module to handle this properly')
+    @stratustryke.core.command.argument('option_name', metavar='option', help = 'Name of option to paste value for')
+    def do_paste(self, args):
+        if self.framework.current_module: # get options for current module
+            opts = self.framework.current_module._options
+            opt_names = self.framework.current_module._options.keys()
+        else:
+            self.print_line('No module currently in use')
+            return
+
+        # Make sure the opt is one of the module's options
+        if args.option_name.upper() not in opt_names:
+            self.print_line(f'Unknown option: {args.option_name}')
+            return
+        
+        # Now receive the paste input
+        self.framework.print_status(f'Receiving paste for {args.option_name.upper()}; Enter ^C to quit')
+        paste = 'paste:'
+        try:
+            while True:
+                line = input()
+                paste += f'{line}\\n'
+        except KeyboardInterrupt:
+            self.framework.print_status(f'Stopped receiving paste value')
+        except Exception as err:
+            self.framework.print_error(f'Exception thrown during paste command: {err}')
+            return
+        
+        # Now try to set the value with the 'paste:' prefix
+        try:
+            success = opts.set_opt(args.option_name, paste)
+        except TypeError as err:
+            self.print_line(f'Invalid data type for \'{args.option_name}\'')
+            self._logger.error(f'Invalid data type for \'{args.option_name}\'')
+            return
+        
+        if success:
+            length = len(paste) if (len(paste) < 20) else 20
+            suffix = '' if (length < 20) else '...'
+            self.print_status(f'  {args.option_name} => {paste[0:length]}{suffix}')
+
+        return
+    
+    def complete_paste(self, text, line, begidx, endidx):
+        return [f'{i} ' for i in self.framework.current_module._options.keys() if i.startswith(text.upper())]
+
+
     # Command: 'options'
     # Action: Displays options for the current or specified module
     # Syntax: 'options', 'options <module>'
@@ -588,7 +641,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         self.print_line('  Module options:')
         self.print_line('')
         masking = self.framework._config.get_val('MASK_SENSITIVE')
-        rows = mod.show_options(masking)
+        truncating = self.framework._config.get_val('TRUNCATE_OPTIONS')
+        rows = mod.show_options(masking, truncating)
         headers = ['Module Name', 'Value', 'Required', 'Description']
         self.framework.print_table(rows, headers, '  ')
 
@@ -620,7 +674,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         # show framework config options
         elif choice == 'config':
             self.print_line(f'  Framework configuration options:{os.linesep}')
-            rows = self.framework._config.show_options()
+            rows = self.framework._config.show_options(False, False)
             headers = ['Name', 'Value', 'Required', 'Description']
         
         elif choice == 'options':
@@ -629,7 +683,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
                 return
             self.print_line(f'  Module options:{os.linesep}')
             masking = self.framework._config.get_val('MASK_SENSITIVE')
-            rows = self.framework.current_module.show_options(masking)
+            truncating = self.framework._config.get_val('TRUNCATE_OPTIONS')
+            rows = self.framework.current_module.show_options(masking, truncating)
             headers = ['Name', 'Value', 'Required', 'Description']
 
         else:
@@ -658,7 +713,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
 
         if args.config_name == None:
             self.print_line(f'{os.linesep}  Framework configuration options:{os.linesep}')
-            rows = self.framework._config.show_options()
+            rows = self.framework._config.show_options(False, False)
             headers = ['Name', 'Value', 'Required', 'Description']
 
             rows = sorted(rows, key = lambda row: row[0]) # sort by opt name
@@ -695,11 +750,18 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
             self.print_line(f'Unknown config command action \'{args.cmd_action}\' not in [\'show\', \'set\']')
 
     def complete_config(self, text, line, begidx, endidx):
-        completions = [i for i in self.framework._config.keys() if i.startswith(text.upper())]
-        if 'true'.startswith(text.lower()):
-            completions.append('true')
-        if 'false'.startswith(text.lower()):
-            completions.append('false')
+        completions = []
+        split = line.split()
+
+        if len(split) < 3: # just 'config' or 'config opt'
+            completions.extend([i for i in self.framework._config.keys() if i.startswith(text.upper())])
+
+        elif len(split) == 3:
+            if 'true'.startswith(text.lower()):
+                completions.append('true')
+            if 'false'.startswith(text.lower()):
+                completions.append('false')
+
         return completions
 
 
@@ -795,6 +857,55 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         return [i for i in self.framework.credentials.list_aliases(workspace) if i.startswith(text)]
 
 
+    # Command: 'mkcred'
+    # Action: Imports a credential into the framework (serves as a command-based alternative to cred import modules)
+    # Syntax: 'mkcred <type>' where type is in the enum set: 'aws', 'azure', 'gcp', 'generic', 'm365'
+    # Text Completion: Completes <type> with 'aws', 'azure', 'gcp', 'generic', 'm365'
+
+    @stratustryke.core.command.command('Import a credential into the framework\'s credential manager')
+    @stratustryke.core.command.argument('cred_type', metavar='type', choices=('AWS', 'aws', 'AZURE', 'Azure', 'azure', 'M365', 'm365', 'GCP', 'gcp', 'GENERIC', 'Generic', 'generic'), help = 'Type of credential to import')
+    @stratustryke.core.command.argument('cred_alias', metavar='alias', help = 'Alias name for the credential to import (must be unique amongst cred aliases)')
+    @stratustryke.core.command.argument('workspace', default=stratustryke.settings.DEFAULT_WORKSPACE, nargs='?', help = f'Workspace to import the credential into [default: \'{stratustryke.settings.DEFAULT_WORKSPACE}]\'')
+    def do_mkcred(self, args):
+       
+        if args.cred_type in ['AWS', 'aws']:
+
+            self.framework.print_line('create an aws cred')
+            access_key = input('  AWS Access Key Id: ')
+            self.framework.spool_message(f'  AWS Access Key Id: {access_key}{os.linesep}')
+            secret_key = input('  AWS Secret Access Key: ')
+            self.framework.spool_message(f'  AWS Secret Access Key: {secret_key}{os.linesep}')
+
+            if access_key.startswith('AKIA'): session_token = None
+            else:
+                session_token = input('  AWS Session Token [None]: ')
+                self.framework.spool_message(f'  AWS Session Token: {session_token}{os.linesep}')
+            
+            region = input(f'  Default AWS Region [{stratustryke.settings.AWS_DEFAULT_REGION}]: ')
+            self.framework.spool_message(f'  Default AWS Region [{stratustryke.settings.AWS_DEFAULT_REGION}]: {region}{os.linesep}')
+            if region == '': region = stratustryke.settings.AWS_DEFAULT_REGION
+
+            # First None val passed is for account id (to be deprecated in place of a property derived from GetCallerIdentity)
+            # Second None val is for ARN (also to be deprecated and replaced with property derived from GetCallerIdentity)
+            cred = stratustryke.core.credential.AWSCredential(args.cred_alias, args.workspace, False, None, access_key, access_key, secret_key, session_token, region, None)
+            self.framework.credentials.store_credential(cred)
+
+
+        else: # Not a support cred type? But somehow was in the 
+            self.framework.print_warning(f'Credential type \'{args.cred_type}\' not currently supported')
+
+        return
+    
+    def complete_mkcred(self, text, line, begidx, endidx):
+        completions = []
+        split = line.split()
+
+        if len(split) < 3: # just 'mkcred' or 'mkcred abc'
+            completions.extend([i for i in ['aws', 'azure', 'gcp', 'generic'] if i.startswith(text.lower())])
+
+        return completions
+
+
     # Command: 'spool'
     # Action: Enables or disables spooling of output to a file
     # Syntax: 'spool <filename>', 'spool off'
@@ -844,6 +955,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         if 'off'.startswith(text):
             completions.append('off')
         return completions
+
 
     # Command: 'run'
     # Action: Runs the current module with the option values specified

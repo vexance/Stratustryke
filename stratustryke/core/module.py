@@ -39,9 +39,9 @@ class StratustrykeModule(object):
     def search_name(self) -> str:
         return f'generic/{self.name}'
 
-    def show_options(self, mask: bool = False) -> list:
+    def show_options(self, mask: bool = False, truncate: bool = True) -> list:
         ''':return: list[list[str]] containing rows of column values'''
-        return self._options.show_options(mask)
+        return self._options.show_options(mask, truncate)
 
 
     def validate_options(self) -> tuple:

@@ -27,7 +27,7 @@ class StratustrykeFramework(object):
     def __init__(self, stdout = None):
         # Package info
         self.__package__ = '.'.join(self.__module__.split('.')[:-1])
-        package_path = importlib.import_module(self.__package__).__path__[0]  # that's some python black magic trickery for you
+        package_path = importlib.import_module(self.__package__).__path__[0]  # honestly no idea how / if this works
 
         # stdout and install / user data dirs
         self._stdout = sys.stdout if (stdout == None) else stdout
@@ -39,8 +39,16 @@ class StratustrykeFramework(object):
         tmp_path = str(pathlib.Path(self._user_data_dir/self.__package__).absolute())
         os.makedirs(tmp_path, exist_ok=True)
 
-        logging_file_handle = logging.handlers.RotatingFileHandler(pathlib.Path(self._user_data_dir/self.__package__/'.log').absolute(), maxBytes=262144, backupCount=5)
-        logging_file_handle.setLevel(logging.DEBUG)
+        raw_loglevel = stratustryke.settings.STRATUSTRYKE_LOGLEVEL
+        loglevel = logging.INFO # Default to info if not designated in settings (or invalid val in settings)
+        if raw_loglevel == 'DEBUG':  loglevel = logging.DEBUG
+        elif raw_loglevel == 'INFO': loglevel = logging.INFO
+        elif raw_loglevel == 'WARNING': loglevel = logging.WARNING
+        elif raw_loglevel == 'ERROR': loglevel = logging.ERROR
+        elif raw_loglevel == 'CRITICAL': loglevel = logging.CRITICAL
+
+        logging_file_handle = logging.handlers.RotatingFileHandler(pathlib.Path(self._user_data_dir/self.__package__/'stratustryke.log').absolute(), maxBytes=262144, backupCount=5)
+        logging_file_handle.setLevel(loglevel)
         logging_file_handle.setFormatter(logging.Formatter("%(asctime)s %(name)-50s %(levelname)-10s %(message)s"))
         logging.getLogger('').addHandler(logging_file_handle)
 
@@ -50,6 +58,7 @@ class StratustrykeFramework(object):
         self._config.add_boolean('COLORED_OUTPUT', 'Enables color in console output', True, stratustryke.settings.COLORED_OUTPUT)
         self._config.add_boolean('FORCE_VALIDATE_OPTIONS', 'Enables validation checks on module options upon running the module', True, stratustryke.settings.FORCE_VALIDATE_OPTIONS)
         self._config.add_boolean('SPOOL_OVERWRITE', 'Enables spool file overwrite and disables default writing mode (append) for file spooling ops', True, stratustryke.settings.SPOOL_OVERWRITE)
+        self._config.add_boolean('TRUNCATE_OPTIONS', 'Enables / disables truncation of long option values to avoid line-breaks in terminal', True, stratustryke.settings.TRUNCATE_OPTIONS)
         self._config.add_string('FIREPROX_CRED_ALIAS', 'Credential alias to use for management of fireprox APIs', True, stratustryke.settings.FIREPROX_CRED_ALIAS)
         self._config.add_string('DEFAULT_TABLE_FORMAT', 'Default outputing format for table output', True, stratustryke.settings.DEFAULT_TABLE_FORMAT)
         self._config.add_string('WORKSPACE', 'Workspace to filter credential objects in the stratustryke sqlite credstore', True, stratustryke.settings.DEFAULT_WORKSPACE)
@@ -97,6 +106,8 @@ class StratustrykeFramework(object):
         prefix = colored('[x]', 'magenta', attrs=('bold',)) if use_color else '[x]'
         output = f'{prefix} {msg}{os.linesep}'
 
+        self._logger.error(output) # errors will always be passed to logger as well
+
         self._stdout.write(output)
         self._stdout.flush()
         return self.spool_message(output)
@@ -119,6 +130,7 @@ class StratustrykeFramework(object):
 
         self._stdout.write(output)
         self._stdout.flush()
+
         return self.spool_message(output)
 
     def print_success(self, msg: str) -> None:
