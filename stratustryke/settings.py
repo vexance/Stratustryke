@@ -20,6 +20,7 @@ MASK_SENSITIVE_OPTIONS = True
 COLORED_OUTPUT = True
 FORCE_VALIDATE_OPTIONS = False
 SPOOL_OVERWRITE = False
+TRUNCATE_OPTIONS = True
 DEFAULT_TABLE_FORMAT = 'simple' # list of options available at https://pypi.org/project/tabulate/
 DEFAULT_WORKSPACE = 'default'
 FIREPROX_CRED_ALIAS = 'fireprox'

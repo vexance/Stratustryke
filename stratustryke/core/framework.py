@@ -50,6 +50,7 @@ class StratustrykeFramework(object):
         self._config.add_boolean('COLORED_OUTPUT', 'Enables color in console output', True, stratustryke.settings.COLORED_OUTPUT)
         self._config.add_boolean('FORCE_VALIDATE_OPTIONS', 'Enables validation checks on module options upon running the module', True, stratustryke.settings.FORCE_VALIDATE_OPTIONS)
         self._config.add_boolean('SPOOL_OVERWRITE', 'Enables spool file overwrite and disables default writing mode (append) for file spooling ops', True, stratustryke.settings.SPOOL_OVERWRITE)
+        self._config.add_boolean('TRUNCATE_OPTIONS', 'Enables / disables truncation of long option values to avoid line-breaks in terminal', True, stratustryke.settings.TRUNCATE_OPTIONS)
         self._config.add_string('FIREPROX_CRED_ALIAS', 'Credential alias to use for management of fireprox APIs', True, stratustryke.settings.FIREPROX_CRED_ALIAS)
         self._config.add_string('DEFAULT_TABLE_FORMAT', 'Default outputing format for table output', True, stratustryke.settings.DEFAULT_TABLE_FORMAT)
         self._config.add_string('WORKSPACE', 'Workspace to filter credential objects in the stratustryke sqlite credstore', True, stratustryke.settings.DEFAULT_WORKSPACE)

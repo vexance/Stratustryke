@@ -433,7 +433,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         self.print_line('  Module options:')
         self.print_line('')
         masking = self.framework._config.get_val('MASK_SENSITIVE')
-        rows = mod.show_options(masking)
+        truncating = self.framework._config.get_val('TRUNCATE_OPTIONS')
+        rows = mod.show_options(masking, truncating)
         headers = ['Module Name', 'Value', 'Required', 'Description']
         self.framework.print_table(rows, headers, '  ')
 
@@ -588,7 +589,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         self.print_line('  Module options:')
         self.print_line('')
         masking = self.framework._config.get_val('MASK_SENSITIVE')
-        rows = mod.show_options(masking)
+        truncating = self.framework._config.get_val('TRUNCATE_OPTIONS')
+        rows = mod.show_options(masking, truncating)
         headers = ['Module Name', 'Value', 'Required', 'Description']
         self.framework.print_table(rows, headers, '  ')
 
@@ -620,7 +622,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         # show framework config options
         elif choice == 'config':
             self.print_line(f'  Framework configuration options:{os.linesep}')
-            rows = self.framework._config.show_options()
+            rows = self.framework._config.show_options(False, False)
             headers = ['Name', 'Value', 'Required', 'Description']
         
         elif choice == 'options':
@@ -629,7 +631,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
                 return
             self.print_line(f'  Module options:{os.linesep}')
             masking = self.framework._config.get_val('MASK_SENSITIVE')
-            rows = self.framework.current_module.show_options(masking)
+            truncating = self.framework._config.get_val('TRUNCATE_OPTIONS')
+            rows = self.framework.current_module.show_options(masking, truncating)
             headers = ['Name', 'Value', 'Required', 'Description']
 
         else:
@@ -658,7 +661,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
 
         if args.config_name == None:
             self.print_line(f'{os.linesep}  Framework configuration options:{os.linesep}')
-            rows = self.framework._config.show_options()
+            rows = self.framework._config.show_options(False, False)
             headers = ['Name', 'Value', 'Required', 'Description']
 
             rows = sorted(rows, key = lambda row: row[0]) # sort by opt name
