@@ -3,6 +3,7 @@
 
 from stratustryke.core.option import Options
 from stratustryke.settings import AWS_DEFAULT_REGION
+from stratustryke.core.lib import StratustrykeException
 import typing
 import stratustryke.core.credential
 from os import linesep
@@ -38,6 +39,21 @@ class StratustrykeModule(object):
     @property
     def search_name(self) -> str:
         return f'generic/{self.name}'
+    
+    @property
+    def web_proxies(self) -> dict:
+        valid, msg = self.framework._config.get_opt('HTTP_PROXY').validate()
+        if not valid:
+            raise StratustrykeException(msg)
+
+        proxy = self.framework._config.get_val('HTTP_PROXY')
+        if proxy in ['', None]:
+            return {}
+        
+        return {
+            'http': proxy,
+            'https': proxy
+        }
 
     def show_options(self, mask: bool = False, truncate: bool = True) -> list:
         ''':return: list[list[str]] containing rows of column values'''

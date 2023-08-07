@@ -588,6 +588,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         try:
             while True:
                 line = input()
+                self.framework.spool_message(f'{line}{os.linesep}')
                 paste += f'{line}\\n'
         except KeyboardInterrupt:
             self.framework.print_status(f'Stopped receiving paste value')
