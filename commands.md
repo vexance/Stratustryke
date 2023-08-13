@@ -163,6 +163,8 @@ This page serves as a reference for interpreter commands. In addition to these f
     * value: New value to update the option to
 * **Aliases:** None
 
+> Note: Setting an option's value to `''`` or `""`` should have similar behavior to the `unset` command.
+
 ## Command: show
 
 * **Description:** Displays information regarding loaded modules, config options, or module options
@@ -180,6 +182,13 @@ This page serves as a reference for interpreter commands. In addition to these f
     * Start or update current spooling file: `stratustryke (module) > spool PATH`
     * Stop spooling operations: `stratustryke (module) > spool off`
 * **Arguments:** path: The path to a designated new or exisiting file. Enter 'off' to disable spooling.
+* **Aliases:** None
+
+## Command: unset
+
+* **Description:** Set an option's value in the currently selected module to None
+* **Syntax:** `stratustryke (module) > unset OPTION_NAME`
+* **Arguments:** option_name: Name of the option where the value will be set to None
 * **Aliases:** None
 
 ## Command: use

@@ -131,10 +131,12 @@ class StratustrykeModule(object):
         lines.append(f'{response.text}{linesep}')
         lines.append(f'{linesep}{linesep}')
 
-        with open(outfile, 'w') as file:
-            file.writelines(lines)
+        if outfile != None:
+            self.framework._logger.info(f'Recording HTTP request/response to {outfile}')
+            with open(outfile, 'w') as file:
+                file.writelines(lines)
 
-        return None
+        return lines
 
 
     def show_info(self) -> list:
