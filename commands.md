@@ -33,15 +33,16 @@ This page serves as a reference for interpreter commands. In addition to these f
 ## Command: config
 
 * **Description:** Show or set framework configuration options. Default values for framework configuration settings are specified within `Stratutstryke/stratustryke/settings.py`. Current framework config options (shown as OPTION_NAME (type | default)) are as follows:
-    * COLORED_OUTPUT (bool | True): Enables / disables color in console output. 
-    * DEFAULT_TABLE_FORMAT (string | simple): Outputing format for table / tabulated output. Optional values can be found [here](https://pypi.org/project/tabulate/).
-    * FIREPROX_CRED_ALIAS (string | fireprox): Alias name for a credential that should be used for `fireprox` command interactions.
-    * FORCE_VALIDATE_OPTIONS (bool | False): If set to True, will validate module options before each module runs.
-    * HTTP_PROXY (string | None): If set, will direct modules that route traffic through the proxy to use the specified proxy. Format is schema://host:port. Useful for sending traffic through tools such as Burp Suite.
-    * MASK_SENSITIVE (bool | True): When enabled, masks ouput containing module options configured with the 'sensitive' flag
-    * SPOOL_OVERWRITE (bool | False): When enabled, spooling to files will overwrite existing files rather than appending
-    * TRUNCATE_OPTIONS (bool | True): When enabled, truncates long option values (exceeding 50 characters) to avoid line-breaks in terminal output
-    * WORKSPACE (string | default): Filters credential aliases returned in credential list commands and text auto-completion
+    * `COLORED_OUTPUT` (bool | True): Enables / disables color in console output. 
+    * `DEFAULT_TABLE_FORMAT` (string | simple): Outputing format for table / tabulated output. Optional values can be found [here](https://pypi.org/project/tabulate/).
+    * `FIREPROX_CRED_ALIAS` (string | fireprox): Alias name for a credential that should be used for `fireprox` command interactions.
+    * `FORCE_VALIDATE_OPTIONS` (bool | False): If set to True, will validate module options before each module runs.
+    * `HTTP_PROXY` (string | None): If set, will direct modules that route traffic through the proxy to use the specified proxy. Format is schema://host:port. Useful for sending traffic through tools such as Burp Suite.
+    * `HTTP_VERIFY_SSL` (bool | True): When enabled, requires verification of SSL/TLS certificates in `Module.request_http()` calls
+    * `MASK_SENSITIVE` (bool | True): When enabled, masks ouput containing module options configured with the 'sensitive' flag
+    * `SPOOL_OVERWRITE` (bool | False): When enabled, spooling to files will overwrite existing files rather than appending
+    * `TRUNCATE_OPTIONS` (bool | True): When enabled, truncates long option values (exceeding 50 characters) to avoid line-breaks in terminal output
+    * `WORKSPACE` (string | default): Filters credential aliases returned in credential list commands and text auto-completion
 * **Syntax:** 
     * Show configuration options: `stratustryke (module) > config`
     * Update configuration option: `stratustryke (module) > config CONFIG_NAME CONFIG_VAL`
