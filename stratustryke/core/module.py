@@ -7,7 +7,8 @@ from stratustryke.core.lib import StratustrykeException
 import typing
 import stratustryke.core.credential
 from os import linesep
-
+from http.client import responses as httpresponses
+from requests import request, Response
 
 class StratustrykeModule(object):
     def __init__(self, framework) -> None:
@@ -55,6 +56,7 @@ class StratustrykeModule(object):
             'https': proxy
         }
 
+
     def show_options(self, mask: bool = False, truncate: bool = True) -> list:
         ''':return: list[list[str]] containing rows of column values'''
         return self._options.show_options(mask, truncate)
@@ -67,15 +69,72 @@ class StratustrykeModule(object):
         return self._options.validate_options()
 
 
-    def load_strings(self, file: str) -> list:
-        ''':return: list[str] | None'''
+    def load_strings(self, file: str, is_paste: bool = False) -> list:
+        '''
+        Parse file lines from either a file (default) or pasted option value (when is_pasted = True).
+        :param file: Path to the file OR raw pasted option value when is_paste = True
+        :param is_paste: boolean flag indicating whether we're reading from file or parsing a string with line seperators
+        :return: list[str] | None'''
         try:
-            with open(file, 'r') as handle:
-                return [line.strip(f'{linesep}') for line in handle.readlines()]
+            if not is_paste:
+                with open(file, 'r') as handle:
+                    return [line.strip(f'{linesep}') for line in handle.readlines()]
+
+            # Otherwise we're parsing a pasted option value which has \\n between each pasted line
+            else: return file.split('\\n')
         
         except Exception as err:
             self.framework.print_error(f'Error reading contents of file: {file}')
             return None
+
+
+    def http_request(self, method: str, url: str, verify: bool = None, proxies: dict = None, 
+                      params = ..., data = ..., headers: dict = ..., cookies = ..., auth = ..., files = ...,
+                      timeout = ..., allow_redirects: bool = ...,  hooks = ..., stream: bool = ..., 
+                      cert = ..., json: dict = ...) -> Response:
+        '''Wraps requests.request() while enforcing framework proxy / TLS verification configurations unless specified otherwise'''
+        if proxies == None: proxies = self.web_proxies
+        if verify == None: verify = self.framework._config.get_val('HTTP_VERIFY_SSL')
+        
+        try:
+            res = request(method, url, verify=verify, proxies=proxies, params=params, data=data, headers=headers, cookies=cookies, auth=auth,
+                          files=files, timeout=timeout, allow_redirects=allow_redirects, hooks=hooks, stream=stream, cert=cert, json=json)
+        except Exception as err:
+            self.framework.print_error(f'Exception thrown ({type(err).__name__}) during HTTP/S request: {err}')
+            self.framework._logger.error(f'Exception thrown ({type(err).__name__}) during HTTP/S request: {err}')
+            return None
+        
+        return res
+
+
+    def http_record(self, response: Response, outfile: str = None) -> list:
+        '''Returns a list[str] containing raw HTTP request / response content. If ourfile is specified, will (over)write the lines to the file
+        :param response: requests.Response object from a HTTP request
+        :param outfile: string path to an output file to create. Overwrites if already existing.
+        :return: list[str] containing raw HTTP request / response content'''
+        lines = []
+        request = response.request
+        
+        # Get raw request content
+        url_path = request.url.split('/')[3:] # strip http: / / host /
+        lines.append(f'{request.method} /{"".join(url_path)} HTTP/1.1{linesep}') # requests supports HTTP/1.1
+        lines.extend([f'{key}: {request.headers[key]}{linesep}' for key in request.headers])
+        lines.append(f'{linesep}')
+        lines.append(f'{request.body}{linesep}')
+        lines.append(f'{linesep}{linesep}')
+
+        # Get raw response content
+        status_description = httpresponses.get(response.status_code, 'UNKNOWN_STATUS_CODE')
+        lines.append(f'HTTP/1.1 {response.status_code} {status_description}{linesep}')
+        lines.extend([f'{key}: {response.headers[key]}{linesep}' for key in response.headers])
+        lines.append(f'{linesep}')
+        lines.append(f'{response.text}{linesep}')
+        lines.append(f'{linesep}{linesep}')
+
+        with open(outfile, 'w') as file:
+            file.writelines(lines)
+
+        return None
 
 
     def show_info(self) -> list:

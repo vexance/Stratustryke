@@ -19,6 +19,7 @@ class Option:
         self._value = default # current value; can change
         self._regex = regex
         self._sensitive = sensitive # Flags an options as sensitive (used in show_options() to mask the value if configured)
+        self._pasted = False # flag used for str options indicating whether the interpreter's paste command was used to set the value
 
 
     # String representation of class object instantiation
@@ -169,16 +170,20 @@ class Options:
 
 
     # Set / unset option functionality
-    def set_opt(self, name: str, value: str) -> bool:
+    def set_opt(self, name: str, value: str, pasted: bool = False) -> bool:
         # Mostly from @zeroSteiner in Termineter
         '''Set the value for an existing option; Does nothing if name doesn't exist
         :param str name: Name of the option to set
-        :param str value: Value to set. Casted from str to the option's type.'''
+        :param str value: Value to set. Casted from str to the option's type.
+        :param bool pasted: Flag for str options indicating whether paste command is used.'''
         option = self.get_opt(name)
         if option == None:
             return False # option not found
         
+        if value == '': value = None # e.g., set OPTION_NAME '' or set OPTION_NAME ""
+        
         if option._opt_type == 'str': # String or readable file
+            option._pasted = pasted
             option._value = value
 
         elif option._opt_type == 'bool': # Boolean
