@@ -1,7 +1,6 @@
 from stratustryke.core.module import StratustrykeModule
 from stratustryke.core.lib import stratustryke_dir
 from pathlib import Path
-from os import linesep
 import requests
 
 
@@ -31,7 +30,7 @@ class Module(StratustrykeModule):
             return (valid, msg)
 
         key = self.get_opt('KEYWORD')
-        filename = key[5:] if key.startswith('file:') else None
+        filename = filename if (Path.exists(filename)) else None
         if filename != None:
             if not (Path(filename).exists() and Path(filename).is_file()):
                 return (False, f'Cannot find keyword file \'{filename}\'')
@@ -68,14 +67,32 @@ class Module(StratustrykeModule):
     def run(self):
         kw = self.get_opt('KEYWORD')
 
-        if kw.startswith('file:'):
-            kw_file = kw[5:]
-            keywords = self.load_strings(kw_file)
+        is_pasted = self._options.get_opt('KEYWORD')._pasted
+        if is_pasted: # paste command was used
+            keywords = self.load_strings(kw, is_paste=True)
+        elif Path.exists(Path(kw)): # filepath specified
+            keywords = self.load_strings(kw)
         else:
             keywords = [kw]
 
         perm_file = self.get_opt('MUTATIONS')
-        mutations = self.load_strings(perm_file)
+        is_pasted = self._options.get_opt('MUTATIONS')._pasted
+
+        if is_pasted: # paste command was used
+            mutations = self.load_strings(perm_file, is_paste=True)
+        elif Path.exists(Path(perm_file)): # filepath specified
+            mutations = self.load_strings(perm_file)
+        else:
+            mutations = [perm_file]
+        
+        # Remove dunplicates / empty lines from keywords and mutations
+        if len(keywords) > 1:
+            keywords = sorted(set(keywords), key = lambda idx: keywords.index(idx))
+            if ('' in keywords): keywords.remove('')
+        if len(mutations) > 1:
+            mutations = sorted(set(mutations), key = lambda idx: mutations.index(idx))
+            if ('' in mutations): mutations.remove('')
+
 
         if (keywords == None or mutations == None): # error reading from the files; already printed error
             return False
