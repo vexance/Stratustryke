@@ -164,8 +164,16 @@ class Module(StratustrykeModule):
         is_pasted = self._options.get_opt('OPTION_NAME')._pasted
         if is_pasted: # paste command was used
             lines = self.load_strings(value, is_paste=True)
-        else: # paste command was not used
+        elif Path.exists(Path(value)): # we recognize a filepath
             lines = self.load_strings(value)
+        else: lines = [value] # likely just a single string value
+
+        # Optionally, remove duplicates and empty lines from the list
+        if len(lines) > 1:
+            # Example duplicate removal if order should be preserved
+            lines = sorted(set(lines), key=lambda idx: lines.index(idx))
+            # lines = list(set(lines)) # Otherwise, more simply if order does not matter
+            lines.remove('') # remove blank lines if necessary
 
 ```
 

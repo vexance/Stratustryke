@@ -9,6 +9,7 @@ import stratustryke.core.credential
 from os import linesep
 from http.client import responses as httpresponses
 from requests import request, Response
+from pathlib import Path
 
 class StratustrykeModule(object):
     def __init__(self, framework) -> None:
@@ -77,6 +78,7 @@ class StratustrykeModule(object):
         :return: list[str] | None'''
         try:
             if not is_paste:
+                file = Path(file)
                 with open(file, 'r') as handle:
                     return [line.strip(f'{linesep}') for line in handle.readlines()]
 
