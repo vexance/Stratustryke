@@ -150,3 +150,45 @@ Now that we have fetched all the specfied options, we can perform module-specifi
 ---
 
 > If information on this page is inaccurate, missing, or out-of-date, please open a ticket [here](https://github.com/vexance/Stratustryke/issues), tagging it with the 'documentation' and 'question' tags.
+
+## Contribution Example: Get File Contents for an Option
+
+This section provides an example on recommended ways to access string options that pertain to files. Modules using options that indicate a file should support both file read and pasted value types. The module should first determine if the paste command was used to set the value of the option, then leverage `Module.load_strings()` which will return a list containing the lines in the file / pasted value.
+
+```python
+...
+class Module(StratustrykeModule):
+...
+    def run(self):
+        value = self.get_opt('OPTION_NAME')
+        is_pasted = self._options.get_opt('OPTION_NAME')._pasted
+        if is_pasted: # paste command was used
+            lines = self.load_strings(value, is_paste=True)
+        else: # paste command was not used
+            lines = self.load_strings(value)
+
+```
+
+## Contribution Example: Manual HTTP Requests Respecting Framework Configs
+
+This section shows how the built-in `Module.http_request()` and `Module.http_record()` methods should be used to perform HTTP/S requests and get the raw HTTP request and response content that can be written to a file. Use of these built-in methods is recommended to ensure the request uses the framework's configured HTTP proxy and SSL/TLS verification settings. In this example, a `GET` request is performed to `https://ifconfig.io`, and then an example is shown where the request and response are written to an output file or simply returned as a list of strings.
+
+```python
+...
+class Module(StratustrykeModule):
+...
+    def run(self):
+        outfile = self.get_opt('OUTPUT_FILE')
+
+        # http_request() passes HTTP_PROXY and HTTP_VERIFY_SSL to requests.request()
+        response = self.http_request('GET', 'https://ifconfig.io')
+
+        if outfile == None:
+            # Lines are returned in case of custom processing by the module
+            lines = self.http_record(response)
+        else:
+            # In this case the lines list is still returned,
+            # but we do not need it as http_record() handles the file write
+            self.http_record(response, outfile)
+
+```

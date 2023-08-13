@@ -25,3 +25,4 @@ DEFAULT_TABLE_FORMAT = 'simple' # list of options available at https://pypi.org/
 DEFAULT_WORKSPACE = 'default'
 FIREPROX_CRED_ALIAS = 'fireprox'
 STRATUSTRYKE_LOGLEVEL = 'INFO' # Must be in enum set: DEBUG, INFO, WARNING, ERROR, CRITICAL
+HTTP_VERIFY_SSL = True

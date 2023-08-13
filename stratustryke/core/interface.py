@@ -535,6 +535,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
             return
 
         try:
+            if args.option_value.startswith('file:'):
+                args.option_value = args.option_value[5:] # strip file: prefix when setting
             success = opts.set_opt(args.option_name, args.option_value)
         except TypeError as err:
             self.print_line(f'Invalid data type for \'{args.option_name}\': {args.option_value}')
@@ -562,6 +564,32 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         return completions
 
 
+    @stratustryke.core.command.command('Unset the value for a module\'s option (i.e., set the option to None)')
+    @stratustryke.core.command.argument('option_name', metavar='option', help = 'Name of the option to unset')
+    def do_unset(self, args):
+        if self.framework.current_module: # get options for current module
+            opts = self.framework.current_module._options
+            opt_names = self.framework.current_module._options.keys()
+        else:
+            self.print_line('No module currently in use')
+            return
+
+        # Make sure the opt is one of the module's options
+        if args.option_name.upper() not in opt_names:
+            self.print_line(f'Unknown option: {args.option_name}')
+            return
+        
+        try:
+            opts.unset_opt(args.option_name)
+        except TypeError as err:
+            self.print_line(f'Invalid data type for \'{args.option_name}\': {args.option_value}')
+            self._logger.error(f'Invalid data type for \'{args.option_name}\': {args.option_value}')
+            return
+        
+
+    def complete_unset(self, text, line, begidx, endidx):
+        return [f'{i} ' for i in self.framework.current_module._options.keys() if i.startswith(text.upper())]
+
     # Command: 'paste'
     # Action: Serves as an alternative to 'set' but supports multi-line input (typically for file vars). Receives input until a control character is received (CTRL-C)
     # Syntax: 'paste <option-name>'
@@ -582,9 +610,15 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
             self.print_line(f'Unknown option: {args.option_name}')
             return
         
+        # Verify we're updating a string option
+        opt_type = self.framework.current_module._options.get_opt(args.option_name.upper())._opt_type
+        if opt_type != 'str':
+            self.framework.print_error(f'Option {args.option_name.upper()} is type {opt_type}, not \'str\'')
+            return
+        
         # Now receive the paste input
         self.framework.print_status(f'Receiving paste for {args.option_name.upper()}; Enter ^C to quit')
-        paste = 'paste:'
+        paste = ''
         try:
             while True:
                 line = input()
@@ -596,9 +630,9 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
             self.framework.print_error(f'Exception thrown during paste command: {err}')
             return
         
-        # Now try to set the value with the 'paste:' prefix
+        # Now try to set the value with pated flag set to true
         try:
-            success = opts.set_opt(args.option_name, paste)
+            success = opts.set_opt(args.option_name, paste, pasted=True)
         except TypeError as err:
             self.print_line(f'Invalid data type for \'{args.option_name}\'')
             self._logger.error(f'Invalid data type for \'{args.option_name}\'')
@@ -775,7 +809,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     @stratustryke.core.command.argument('module', help = 'The module to select')
     def do_use(self, args):
         if args.module not in self.framework.modules:
-            self.print_line(f'Could not find module: \'{args.module}\'')
+            self.print_line(f'Could not find module: \'{args.module}\', ensure the full module path is specified')
             self._logger.error(f'Unable to select module: \'{args.module}\'; module not found')
             return
         

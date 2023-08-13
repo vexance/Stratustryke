@@ -103,6 +103,7 @@ class AWSCredential(CloudCredential):
             self._arn = arn
             self._session = None
 
+
     def __str__(self) -> str:
         tmp = super().__str__()
         builder = literal_eval(tmp)
@@ -113,6 +114,33 @@ class AWSCredential(CloudCredential):
         builder['_arn'] = self._arn
         builder['_session'] = None # can't really copy a boto3.Session object as a string
         return str(builder)
+
+
+    @property
+    def account_id(self) -> str:
+        if self._account_id != None: return self._account_id
+        else: # haven't gotten account_id yet
+            success = self.verify()
+            if success: return self._account_id
+            else: return None
+
+
+    @property
+    def arn(self) -> str:
+        if self._arn != None: return self._arn
+        else:
+            success = self.verify()
+            if success: return self._arn
+            else: return None
+
+
+    @property
+    def user_id(self) -> str:
+        if self._user_id != None: return self._user_id
+        else:
+            success = self.verify()
+            if success: return self._user_id
+            else: return None
 
 
     def session(self, region = None) -> boto3.Session:
@@ -130,12 +158,12 @@ class AWSCredential(CloudCredential):
 
     def verify(self) -> bool:
         '''Performs an STS get-caller-identity call in order to determine the access_key_id, secret_key, and session_token are valid'''
-        session = self.get_boto_session()
+        session = self.session()
         client = session.client('sts')
         try:
             res = client.get_caller_identity()
             self._account_id = res.Account
-            self._aws_identity = res.Arn
+            self._arn = res.Arn
             self._user_id = res.UserId
             self._verified = True
         except Exception as err:
@@ -176,11 +204,14 @@ class AWSCredential(CloudCredential):
             secret_key = res.get('Credentials', {}).get('SecretAccessKey', False)
             token = res.get('Credentials', {}).get('SessionToken', False)
 
+            arn = res.get('AssumeRoleUser', {}).get('Arn', None)
+            acc_id = arn.split(':')[4] if (arn != None) else None
+
             if not all([access_key, secret_key, token]):
                 raise StratustrykeException(f'Did not retrieve all of aws_acess_key_id, aws_secret_access_key, aws_session_token')
 
             return AWSCredential(alias, access_key=access_key, secret_key=secret_key, session_token=token,
-                                 default_region=region, workspace=workspace)
+                                 default_region=region, workspace=workspace, arn=arn, acc_id=acc_id)
         
         except Exception as err:
             raise StratustrykeException(f'Exception thrown performing sts:AssumeRole for {role}\n{err}')

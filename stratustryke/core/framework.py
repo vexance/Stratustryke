@@ -62,7 +62,8 @@ class StratustrykeFramework(object):
         self._config.add_string('FIREPROX_CRED_ALIAS', 'Credential alias to use for management of fireprox APIs', True, stratustryke.settings.FIREPROX_CRED_ALIAS)
         self._config.add_string('DEFAULT_TABLE_FORMAT', 'Default outputing format for table output', True, stratustryke.settings.DEFAULT_TABLE_FORMAT)
         self._config.add_string('WORKSPACE', 'Workspace to filter credential objects in the stratustryke sqlite credstore', True, stratustryke.settings.DEFAULT_WORKSPACE)
-        self._config.add_string('HTTP_PROXY', 'Proxy (schema://host:port) for modules to use as an HTTP/S proxy for web traffic', False, None, 'http[s]?[:]\/\/.*[:][0-9]{1,5}')
+        self._config.add_string('HTTP_PROXY', 'Proxy (schema://host:port) for modules to use as an HTTP/S proxy for web traffic', True, None, '(http[s]?|socks[45][h]?)[:]\/\/.*[:][0-9]{1,5}')
+        self._config.add_boolean('HTTP_VERIFTY_SSL', 'Enable or disable SSL/TLS verification when modules perform manual HTTP requests', True, stratustryke.settings.HTTP_VERIFY_SSL)
 
         # Load modules into framework - get modules dir and all directories below it
         self.current_module = None
