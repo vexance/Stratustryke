@@ -23,24 +23,27 @@ class HTTPRequestParser(object):
     '''Class which will parse HTTP request files with JSON bodies and offer a means to create associated request objects'''
     def __init__(self, obj: object, hdrs: list = []) -> None:
         self.ignored_headers = hdrs
-        if isinstance(obj, str): self.construct_from_file(Path(obj))
-        elif isinstance(obj, Path): self.construct_from_file(obj)
+        if isinstance(obj, list): self.construct(None, lines=obj)
+        elif isinstance(obj, str): self.construct(Path(obj), lines=None)
+        elif isinstance(obj, Path): self.construct(obj, lines=None)
         else: raise InvalidObjectTypeException(type(obj))
         return None
         
-
-    def construct_from_file(self, filepath: Path) -> None:
+    def construct(self, filepath: Path, lines: list = None) -> None:
         '''HTTPRequestParser constructor for file object types'''
 
-        exists = filepath.exists() and filepath.is_file()
-        if not exists: raise FileDoesNotExistException(str(filepath))
+        if filepath != None:
+            exists = filepath.exists() and filepath.is_file()
+            if not exists: raise FileDoesNotExistException(str(filepath))
         
-        lines = []
-        with open(filepath, 'r') as file:
-            lines = [line.strip() for line in file.readlines()]
+        if lines == None:
+            lines = []
+            with open(filepath, 'r') as file:
+                lines = [line.strip() for line in file.readlines()]
 
-        self.api_name = filepath.stem
+            self.api_name = filepath.stem
 
+        else: self.api_name = None
         split = lines[0].split() # split on whitespace
         self.http_verb = split[0]
         self.http_path = split[1]
@@ -63,7 +66,8 @@ class HTTPRequestParser(object):
                 self.http_headers[header_name] = header_value
             
             else: self.raw_body += f'{lines[i]}\n'
-        
+
+        self.raw_body = self.raw_body.strip()
         self.parse_body()
         return None
 
@@ -79,8 +83,8 @@ class HTTPJsonRequestParser(HTTPRequestParser):
 
     def parse_body(self) -> None:
         '''Parses content specified within self.raw_body into a JSON dictionary'''
-        if self.raw_body.strip() == '':
-            self.http_body=''
+        if self.raw_body.strip() == '' or self.http_verb == 'GET':
+            self.http_body=None
             return None
 
         try:

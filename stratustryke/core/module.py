@@ -90,17 +90,30 @@ class StratustrykeModule(object):
             return None
 
 
-    def http_request(self, method: str, url: str, verify: bool = None, proxies: dict = None, 
-                      params = ..., data = ..., headers: dict = ..., cookies = ..., auth = ..., files = ...,
-                      timeout = ..., allow_redirects: bool = ...,  hooks = ..., stream: bool = ..., 
-                      cert = ..., json: dict = ...) -> Response:
-        '''Wraps requests.request() while enforcing framework proxy / TLS verification configurations unless specified otherwise'''
-        if proxies == None: proxies = self.web_proxies
-        if verify == None: verify = self.framework._config.get_val('HTTP_VERIFY_SSL')
-        
+    def http_request(self, method: str, url: str, **kwargs) -> Response:
+        '''
+        Wraps requests.request() while enforcing framework proxy / TLS verification configs
+        :param method: (str) request method (e.g., GET, POST, PUT, etc)
+        :param url: (str) URL for the request
+        :param data: (str) non-json request body data
+        :param json: (str) JSON request body data
+        :param auth: (any) authentication. Support Sigv4
+        '''
+        proxies = kwargs.get('proxies', self.web_proxies)
+        verify = kwargs.get('verify', self.framework._config.get_val('HTTP_VERIFY_SSL'))
+        data = kwargs.get('data', None)
+        auth = kwargs.get('auth', None)
+        json = kwargs.get('json', None)
+        headers = kwargs.get('headers', {})
+        if self.framework._config.get_val('HTTP_STSK_HEADER'):
+            headers.update({'X-Stratustryke-Module': f'{self.search_name}'})
+
+        if method == 'GET': json, data = None, None # Ensure GET requests don't contain request body
         try:
-            res = request(method, url, verify=verify, proxies=proxies, params=params, data=data, headers=headers, cookies=cookies, auth=auth,
-                          files=files, timeout=timeout, allow_redirects=allow_redirects, hooks=hooks, stream=stream, cert=cert, json=json)
+            res = request(method, url, verify=verify, proxies=proxies, data=data, headers=headers, auth=auth, json=json)
+            
+            # res = request(method, url, verify=verify, proxies=proxies, params=params, data=data, headers=headers, cookies=cookies, auth=auth,
+            #               files=files, timeout=timeout, allow_redirects=allow_redirects, hooks=hooks, stream=stream, cert=cert, json=json)
         except Exception as err:
             self.framework.print_error(f'Exception thrown ({type(err).__name__}) during HTTP/S request: {err}')
             self.framework._logger.error(f'Exception thrown ({type(err).__name__}) during HTTP/S request: {err}')

@@ -162,12 +162,12 @@ class AWSCredential(CloudCredential):
         client = session.client('sts')
         try:
             res = client.get_caller_identity()
-            self._account_id = res.Account
-            self._arn = res.Arn
-            self._user_id = res.UserId
+            self._account_id = res['Account']
+            self._arn = res['Arn']
+            self._user_id = res['UserId']
             self._verified = True
         except Exception as err:
-            raise StratustrykeException(f'Failed to perform get-caller-identity call for \'{self._access_key_id}\'')
+            raise StratustrykeException(f'Failed to perform get-caller-identity call for \'{self._access_key_id}\': {err}')
 
         return True
     
