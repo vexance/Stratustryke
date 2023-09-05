@@ -152,13 +152,21 @@ class Module(StratustrykeModule):
     def run(self):
         uname = self.get_opt('USERNAME')
         passwd = self.get_opt('PASSWORD')
-        delay = self.get_opt('DELAY')
 
-        if uname.startswith('file:'):
-            usernames = self.load_strings(uname[5:])
-        else: usernames = [uname]
+        is_pasted = self._options.get_opt('USERNAME')._pasted
+        if is_pasted: # paste command was used
+            usernames = self.load_strings(uname, is_paste=True)
+        elif Path.exists(Path(uname)): # filepath specified
+            usernames = self.load_strings(uname)
+        else:
+            usernames = [uname]
 
-        self.framework.print_status(f'Spraying against {len(usernames)} potential users')
+        # Remove dunplicates / empty line entries
+        if len(usernames) > 1:
+            usernames = sorted(set(usernames), key = lambda idx: usernames.index(idx))
+            if ('' in usernames): usernames.remove('')
+
+        self.framework.print_status(f'Spraying against {len(usernames)} potential user(s)')
 
         throttled = self.password_spray(usernames, passwd)
 

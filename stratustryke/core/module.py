@@ -7,7 +7,9 @@ from stratustryke.core.lib import StratustrykeException
 import typing
 import stratustryke.core.credential
 from os import linesep
-
+from http.client import responses as httpresponses
+from requests import request, Response
+from pathlib import Path
 
 class StratustrykeModule(object):
     def __init__(self, framework) -> None:
@@ -55,6 +57,7 @@ class StratustrykeModule(object):
             'https': proxy
         }
 
+
     def show_options(self, mask: bool = False, truncate: bool = True) -> list:
         ''':return: list[list[str]] containing rows of column values'''
         return self._options.show_options(mask, truncate)
@@ -67,15 +70,129 @@ class StratustrykeModule(object):
         return self._options.validate_options()
 
 
-    def load_strings(self, file: str) -> list:
-        ''':return: list[str] | None'''
+    def load_strings(self, file: str, is_paste: bool = False) -> list:
+        '''
+        Parse file lines from either a file (default) or pasted option value (when is_pasted = True).
+        :param file: Path to the file OR raw pasted option value when is_paste = True
+        :param is_paste: boolean flag indicating whether we're reading from file or parsing a string with line seperators
+        :return: list[str] | None'''
         try:
-            with open(file, 'r') as handle:
-                return [line.strip(f'{linesep}') for line in handle.readlines()]
+            if not is_paste:
+                file = Path(file)
+                with open(file, 'r') as handle:
+                    return [line.strip(f'{linesep}') for line in handle.readlines()]
+
+            # Otherwise we're parsing a pasted option value which has \\n between each pasted line
+            else: return file.split('\\n')
         
         except Exception as err:
             self.framework.print_error(f'Error reading contents of file: {file}')
             return None
+
+
+    def lines_from_string_opt(self, opt_name: str, **kwargs) -> list:
+        '''
+        Returns list[str] containing lines from an option file/paste or an individual value
+        :param opt_name: (str) Option name to retrieve list value for
+        :param delimiter: (str) Character to seperate value on if 'set' command was used
+        :param unique: (bool) Flag which removes duplicate entries from the list (default: False)
+        :return: list[str] parsed option string values
+        '''
+        delim = kwargs.get('delimiter', None)
+        unique = kwargs.get('unique', False)
+        value = self.get_opt(opt_name)
+
+        if value == None or value == '':
+            return None
+        
+        is_pasted = self._options.get_opt(opt_name)._pasted
+        if is_pasted:
+            parsed = self.load_strings(value, is_paste=True)
+        elif Path.exists(Path(value)):
+            parsed = self.load_strings(value, is_paste=False)
+        else:
+            if delim != None:
+                parsed = value.split(delim)
+            else: parsed = [value]
+
+        if unique:
+            if len(parsed) > 1:
+                # Example duplicate removal if order should be preserved
+                parsed = sorted(set(parsed), key=lambda idx: parsed.index(idx))
+                # lines = list(set(lines)) # Otherwise, more simply if order does not matter
+                parsed.remove('') # remove blank lines if necessary
+
+        return parsed
+
+
+    def http_request(self, method: str, url: str, **kwargs) -> Response:
+        '''
+        Wraps requests.request() while enforcing framework proxy / TLS verification configs
+        :param method: (str) request method (e.g., GET, POST, PUT, etc)
+        :param url: (str) URL for the request
+        :param data: (str) non-json request body data
+        :param json: (str) JSON request body data
+        :param auth: (any) authentication. Support Sigv4
+        '''
+        proxies = kwargs.get('proxies', self.web_proxies)
+        verify = kwargs.get('verify', self.framework._config.get_val('HTTP_VERIFY_SSL'))
+        data = kwargs.get('data', None)
+        auth = kwargs.get('auth', None)
+        json = kwargs.get('json', None)
+        headers = kwargs.get('headers', {})
+        if self.framework._config.get_val('HTTP_STSK_HEADER'):
+            headers.update({'X-Stratustryke-Module': f'{self.search_name}'})
+
+        if method == 'GET': json, data = None, None # Ensure GET requests don't contain request body
+        try:
+            res = request(method, url, verify=verify, proxies=proxies, data=data, headers=headers, auth=auth, json=json)
+            
+            # res = request(method, url, verify=verify, proxies=proxies, params=params, data=data, headers=headers, cookies=cookies, auth=auth,
+            #               files=files, timeout=timeout, allow_redirects=allow_redirects, hooks=hooks, stream=stream, cert=cert, json=json)
+        except Exception as err:
+            self.framework.print_error(f'Exception thrown ({type(err).__name__}) during HTTP/S request: {err}')
+            self.framework._logger.error(f'Exception thrown ({type(err).__name__}) during HTTP/S request: {err}')
+            return None
+        
+        return res
+
+
+    def http_record(self, response: Response, outfile: str = None) -> list:
+        '''Returns a list[str] containing raw HTTP request / response content. If ourfile is specified, will (over)write the lines to the file
+        :param response: requests.Response object from a HTTP request
+        :param outfile: string path to an output file to create. Overwrites if already existing.
+        :return: list[str] containing raw HTTP request / response content'''
+        lines = []
+        request = response.request
+        
+        # Get raw request content
+        url_path = request.url.split('/')[3:] # strip http: / / host /
+        lines.append(f'{request.method} /{"".join(url_path)} HTTP/1.1{linesep}') # requests supports HTTP/1.1
+        lines.extend([f'{key}: {request.headers[key]}{linesep}' for key in request.headers])
+        lines.append(f'{linesep}')
+
+        if request.body == None: lines.append(f'{linesep}')
+        else: 
+            if isinstance(request.body, bytes):
+                request.body = request.body.decode()
+            lines.append(f'{request.body}{linesep}')
+        lines.append(f'{linesep}{linesep}')
+
+        # Get raw response content
+        status_description = httpresponses.get(response.status_code, 'UNKNOWN_STATUS_CODE')
+        lines.append(f'HTTP/1.1 {response.status_code} {status_description}{linesep}')
+        lines.extend([f'{key}: {response.headers[key]}{linesep}' for key in response.headers])
+        lines.append(f'{linesep}')
+        if response.text == None: lines.append(f'{linesep}')
+        else: lines.append(f'{response.text}{linesep}')
+        lines.append(f'{linesep}{linesep}')
+
+        if outfile != None:
+            self.framework._logger.info(f'Recording HTTP request/response to {outfile}')
+            with open(outfile, 'w') as file:
+                file.writelines(lines)
+
+        return lines
 
 
     def show_info(self) -> list:
