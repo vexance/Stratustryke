@@ -135,7 +135,12 @@ class StratustrykeModule(object):
         lines.append(f'{request.method} /{"".join(url_path)} HTTP/1.1{linesep}') # requests supports HTTP/1.1
         lines.extend([f'{key}: {request.headers[key]}{linesep}' for key in request.headers])
         lines.append(f'{linesep}')
-        lines.append(f'{request.body}{linesep}')
+
+        if request.body == None: lines.append(f'{linesep}')
+        else: 
+            if isinstance(request.body, bytes):
+                request.body = request.body.decode()
+            lines.append(f'{request.body}{linesep}')
         lines.append(f'{linesep}{linesep}')
 
         # Get raw response content
@@ -143,7 +148,8 @@ class StratustrykeModule(object):
         lines.append(f'HTTP/1.1 {response.status_code} {status_description}{linesep}')
         lines.extend([f'{key}: {response.headers[key]}{linesep}' for key in response.headers])
         lines.append(f'{linesep}')
-        lines.append(f'{response.text}{linesep}')
+        if response.text == None: lines.append(f'{linesep}')
+        else: lines.append(f'{response.text}{linesep}')
         lines.append(f'{linesep}{linesep}')
 
         if outfile != None:
