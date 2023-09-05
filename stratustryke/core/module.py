@@ -90,6 +90,41 @@ class StratustrykeModule(object):
             return None
 
 
+    def lines_from_string_opt(self, opt_name: str, **kwargs) -> list:
+        '''
+        Returns list[str] containing lines from an option file/paste or an individual value
+        :param opt_name: (str) Option name to retrieve list value for
+        :param delimiter: (str) Character to seperate value on if 'set' command was used
+        :param unique: (bool) Flag which removes duplicate entries from the list (default: False)
+        :return: list[str] parsed option string values
+        '''
+        delim = kwargs.get('delimiter', None)
+        unique = kwargs.get('unique', False)
+        value = self.get_opt(opt_name)
+
+        if value == None or value == '':
+            return None
+        
+        is_pasted = self._options.get_opt(opt_name)._pasted
+        if is_pasted:
+            parsed = self.load_strings(value, is_paste=True)
+        elif Path.exists(Path(value)):
+            parsed = self.load_strings(value, is_paste=False)
+        else:
+            if delim != None:
+                parsed = value.split(delim)
+            else: parsed = [value]
+
+        if unique:
+            if len(parsed) > 1:
+                # Example duplicate removal if order should be preserved
+                parsed = sorted(set(parsed), key=lambda idx: parsed.index(idx))
+                # lines = list(set(lines)) # Otherwise, more simply if order does not matter
+                parsed.remove('') # remove blank lines if necessary
+
+        return parsed
+
+
     def http_request(self, method: str, url: str, **kwargs) -> Response:
         '''
         Wraps requests.request() while enforcing framework proxy / TLS verification configs
