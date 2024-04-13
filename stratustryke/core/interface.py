@@ -909,7 +909,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
             access_key = input('  AWS Access Key Id: ')
             self.framework.spool_message(f'  AWS Access Key Id: {access_key}{os.linesep}')
             secret_key = input('  AWS Secret Access Key: ')
-            self.framework.spool_message(f'  AWS Secret Access Key: {secret_key}{os.linesep}')
+            self.framework.spool_message(f'  AWS Secret Access Key: <REDACTED>{os.linesep}')
 
             if access_key.startswith('AKIA'): session_token = None
             else:
