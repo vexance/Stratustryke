@@ -139,10 +139,7 @@ class CredentialStoreConnector(collections.abc.Mapping):
             self._framework.print_status(f'Stored {cred_type} credential with alias: {cred._alias}')
             self._logger.info(f'Stored {cred_type} credential with alias: {cred._alias}')
         except Exception as err:
-            self._framework.print_error(f'Exception thrown while storing credential: {cred._alias}')
-            self._framework.print_error(f'{err}')
-            self._logger.error(f'Exception thrown while storing credential: {cred._alias}')
-            self._logger.error(f'{err}')
+            self._framework.print_error(f'Exception thrown while storing credential: {cred._alias} - {err}')
             return False
         
         return True
@@ -159,10 +156,7 @@ class CredentialStoreConnector(collections.abc.Mapping):
             self._creds.pop(alias, None)
             self._framework.print_status(f'Removed credential: {alias}')
         except Exception as err:
-            self._framework.print_error(f'Exception thrown while removing credential: {alias}')
-            self._framework.print_error(f'{err}')
-            self._logger.error(f'Exception thrown while storing credential: {alias}')
-            self._logger.error(f'{err}')
+            self._framework.print_error(f'Exception thrown while removing credential: {alias} - {err}')
             return False
 
         return True

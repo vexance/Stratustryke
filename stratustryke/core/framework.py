@@ -115,6 +115,7 @@ class StratustrykeFramework(object):
         self._stdout.flush()
         return self.spool_message(output)
 
+
     def print_status(self, msg: str) -> None:
         '''Prints (blue) status message: [*] {msg}'''
         use_color = self._config.get_val('COLORED_OUTPUT')
@@ -124,6 +125,7 @@ class StratustrykeFramework(object):
         self._stdout.write(output)
         self._stdout.flush()
         self.spool_message(output)
+
 
     def print_warning(self, msg: str) -> None:
         '''Prints (yellow) warning message: [!] {msg}'''
@@ -136,6 +138,7 @@ class StratustrykeFramework(object):
 
         return self.spool_message(output)
 
+
     def print_success(self, msg: str) -> None:
         '''Prints (green) success message: [+] {msg}'''
         use_color = self._config.get_val('COLORED_OUTPUT')
@@ -146,6 +149,7 @@ class StratustrykeFramework(object):
         self._stdout.flush()
         return self.spool_message(output)
     
+
     def print_failure(self, msg: str) -> None:
         '''Prints (red) failure (not error!) message: [-] {msg}'''
         use_color = self._config.get_val('COLORED_OUTPUT')
@@ -156,6 +160,7 @@ class StratustrykeFramework(object):
         self._stdout.flush()
         return self.spool_message(output)
 
+
     def print_line(self, msg: str) -> None:
         '''Prints line to the stdout with regular text: {msg}'''
         output = f'{msg}{os.linesep}'
@@ -163,6 +168,7 @@ class StratustrykeFramework(object):
         self._stdout.write(output)
         self._stdout.flush()
         return self.spool_message(output)
+
 
     def get_module_logger(self, mod_name: str) -> logging.Logger:
         '''Returns a logger for each module'''
