@@ -124,7 +124,7 @@ class StratustrykeFramework(object):
 
         self._stdout.write(output)
         self._stdout.flush()
-        self.spool_message(output)
+        return self.spool_message(output)
 
 
     def print_warning(self, msg: str) -> None:
