@@ -33,11 +33,6 @@ class Module(AWSModule):
     def search_name(self):
         return f'aws/enum/authed/{self.name}'
 
-
-    @property
-    def search_name(self):
-        return f'aws/enum/authed/{self.name}'
-
     
     def validate_options(self) -> tuple:
         valid, msg = super().validate_options()
