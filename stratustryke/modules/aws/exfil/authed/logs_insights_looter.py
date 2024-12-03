@@ -31,7 +31,7 @@ class Module(AWSModule):
 
     @property
     def search_name(self):
-        return f'aws/enum/authed/{self.name}'
+        return f'aws/exfil/authed/{self.name}'
 
     
     def validate_options(self) -> tuple:
