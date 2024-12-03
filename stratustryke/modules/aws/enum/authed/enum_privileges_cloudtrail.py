@@ -14,7 +14,7 @@ class Module(AWSModule):
             'References': ['']
         }
 
-        self._options.add_integer('TIMEDELTA_DAYS', 'Time period in days of events to include (1-90)', True, 14)
+        self._options.add_integer('TIMEDELTA_DAYS', 'Time period in days of events to include (1-90)', True, 7)
         self._options.add_boolean('ONLY_READ', 'When enabled, skips inspection of non-readonly events', True, False)
         self._options.add_string('PRINCIPAL_ARN', 'When supplied, filter output on the set Principal ARN(s) [S/F/P]', False)
 
