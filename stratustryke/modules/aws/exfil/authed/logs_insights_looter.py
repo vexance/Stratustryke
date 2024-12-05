@@ -44,7 +44,7 @@ class Module(AWSModule):
         if not (output_dir.exists() and output_dir.is_dir()):
             return (False, f'Download directory does not exist: {output_dir}')
         
-        lg_len = len(self.lines_from_string_opt('LOG_GROUPS', unique=True))
+        lg_len = len(self.get_opt_multiline('LOG_GROUPS', unique=True))
         if lg_len > 50 or lg_len < 1:
             return (False, f'Number of log groups supplied, {lg_len}, is more than 50 or less than 1')
         
@@ -63,7 +63,7 @@ class Module(AWSModule):
         '''Starts a logs insights queries and waits until the query has completed before retrieving results and writing to a file'''
         
         delay = self.get_opt('POLL_DELAY')
-        log_groups = self.lines_from_string_opt('LOG_GROUPS')
+        log_groups = self.get_opt_multiline('LOG_GROUPS')
         verbose = self.get_opt('VERBOSE')
         out_dir = self.get_opt('OUTPUT_DIR')
         record_limit = self.get_opt('RECORD_LIMIT')
@@ -132,13 +132,13 @@ class Module(AWSModule):
             self.framework.print_error(f'Polling delay \'{delay}\' should be within 1 to 300 seconds')
             return None
         
-        lg_count = len(self.lines_from_string_opt('LOG_GROUPS'))
+        lg_count = len(self.get_opt_multiline('LOG_GROUPS'))
         if lg_count > 49:
             self.framework.print_error(f'Number of log groups provided, {lg_count}, is more than the 50 log group threshold.')
             return None
 
         # Multi-line supported options
-        search_pattern = self.lines_from_string_opt('SEARCH_PATTERN')
+        search_pattern = self.get_opt_multiline('SEARCH_PATTERN')
 
         # Cast start / end times to linux epochs
         now = datetime.now()

@@ -64,7 +64,7 @@ class StratustrykeModule(object):
 
 
     def validate_options(self) -> tuple:
-        '''Validate option-specific requirements.
+        '''Validate option-specific requirements.\n
         :rtype: (bool, str | None)'''
         # Wrapper for Options class validate_options() call; can be overriden for additional checks
         return self._options.validate_options()
@@ -72,7 +72,7 @@ class StratustrykeModule(object):
 
     def load_strings(self, file: str, is_paste: bool = False) -> list:
         '''
-        Parse file lines from either a file (default) or pasted option value (when is_pasted = True).
+        Parse file lines from either a file (default) or pasted option value (when is_pasted = True).\n
         :param file: Path to the file OR raw pasted option value when is_paste = True
         :param is_paste: boolean flag indicating whether we're reading from file or parsing a string with line seperators
         :return: list[str] | None'''
@@ -90,9 +90,9 @@ class StratustrykeModule(object):
             return None
 
 
-    def lines_from_string_opt(self, opt_name: str, **kwargs) -> list:
+    def get_opt_multiline(self, opt_name: str, **kwargs) -> list:
         '''
-        Returns list[str] containing lines from an option file/paste or an individual value
+        Returns list[str] containing lines from an option file/paste or an individual value\n
         :param opt_name: (str) Option name to retrieve list value for
         :param delimiter: (str) Character to seperate value on if 'set' command was used
         :param unique: (bool) Flag which removes duplicate entries from the list (default: False)
@@ -127,7 +127,7 @@ class StratustrykeModule(object):
 
     def http_request(self, method: str, url: str, **kwargs) -> Response:
         '''
-        Wraps requests.request() while enforcing framework proxy / TLS verification configs
+        Wraps requests.request() while enforcing framework proxy / TLS verification configs\n
         :param method: (str) request method (e.g., GET, POST, PUT, etc)
         :param url: (str) URL for the request
         :param data: (str) non-json request body data
@@ -196,8 +196,8 @@ class StratustrykeModule(object):
 
 
     def show_info(self) -> list:
-        '''Return module information and technical details. Should not be overriden in child classes
-        :rtype: list<str>'''
+        '''Return module information and technical details. Should not be overriden in child classes\n
+        :rtype: list<str> containing module information'''
         output = []
         output.append(f'  Module Name: {self.search_name}')
         output.append(f'  Author(s): {", ".join(self._info.get("Authors", []))}')
@@ -233,10 +233,10 @@ class StratustrykeModule(object):
         self._options.reset_opt(name)
 
 
-#    Must be implemented by grandchild / child classes
-#    def run(self) -> None:
-#        '''Execute current module. This serves as the Module\'s main() function. This will automatically trigger option validation when set in the stratustryke config.'''
-#        pass
+    #Must be implemented by inheriting classes
+    #def run(self) -> None:
+    #   '''Execute current module. This serves as the Module\'s main() function. This will automatically trigger option validation when set in the stratustryke config.'''
+    #   pass
 
 
 
@@ -248,7 +248,13 @@ class AWSModule(StratustrykeModule):
         self._options.add_string('AUTH_SESSION_TOKEN', 'AWS session token for temporary credential authentication', regex='[0-9a-zA-Z\/+]{364}', sensitive=True)
         self._options.add_string('AWS_REGION', 'AWS region to specify within calls', False, AWS_DEFAULT_REGION)
         self._cred = None
+
+
+    @property
+    def search_name(self):
+        return f'aws/{self.name}'
     
+
     def validate_options(self) -> tuple:
         # Validate required params and regex matches
         valid, msg = super().validate_options()
@@ -272,17 +278,47 @@ class AWSModule(StratustrykeModule):
         cred_region = region if (region != None) else self.get_opt('AWS_REGION')
 
         return stratustryke.core.credential.AWSCredential(f'{self.name}', access_key=access_key, secret_key=secret, session_token=token, default_region=cred_region)
+        
+
+# Todo
+class M365Module(StratustrykeModule):
+    def __init__(self, framework) -> None:
+        super().__init__(framework)
+        self._options.add_string('AUTH_TOKEN', 'Pre-existing access token for Microsoft Graph; overrides other AUTH_ options', False, sensitive=True)
+        self._options.add_string('AUTH_PRINCIPAL', 'Entra service principal id, email, or managed identity', False)
+        self._options.add_string('AUTH_SECRET', 'Authentication secret (e.g, client secret / password)', False, sensitive=True)
+        self._options.add_string('AUTH_TENANT', 'Azure tenant / directory identifer; required if AUTH_TOKEN not set', False, regex='^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+        self._cred = None
 
 
     @property
     def search_name(self):
-        return f'aws/{self.name}'
+        return f'm365/{self.name}'
+    
 
+    def get_cred(self,):
+        access_token = self.get_opt('AUTH_TOKEN')
+        principal = self.get_opt('AUTH_PRINCIPAL')
+        secret = self.get_opt('AUTH_SECRET')
+        tenant = self.get_opt('AUTH_TENANT')
+
+        return stratustryke.core.credential.MicrosoftCredential(f'{self.name}', principal=principal, secret=secret, tenant=tenant, access_token=access_token)
+
+    
 
 # Todo:
-class AzureModule(StratustrykeModule):
+class AzureModule(M365Module):
     def __init__(self) -> None:
         super().__init__()
+        self._options.add_string('AZ_SUBSCRIPTION', 'Target Azure subscription id []', False, AWS_DEFAULT_REGION)
+        self._cred = None
+
+
+    @property
+    def search_name(self):
+        return f'az/{self.name}'
+
+
         
 
 # Todo

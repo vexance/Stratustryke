@@ -69,8 +69,8 @@ class CredentialStoreConnector(collections.abc.Mapping):
                 cred = stratustryke.core.credential.APICredential(alias, workspace, from_dict=str_rep)
             elif cred_type == 'AWS':
                 cred = stratustryke.core.credential.AWSCredential(alias, workspace, from_dict=str_rep)
-            elif cred_type == 'Azure':
-                cred = stratustryke.core.credential.AzureCredential(alias, workspace, from_dict=str_rep)
+            elif cred_type == 'MSFT':
+                cred = stratustryke.core.credential.MicrosoftCredential(alias, workspace, from_dict=str_rep)
             elif cred_type == 'GCP':
                 cred = stratustryke.core.credential.GCPCredential(alias, workspace, from_dict=str_rep)
             else:
@@ -99,7 +99,11 @@ class CredentialStoreConnector(collections.abc.Mapping):
             opts.set_opt('AUTH_SESSION_TOKEN', cred._session_token)
             opts.set_opt('AWS_REGION', cred._default_region)
 
-        elif cred_type == 'Azure':
+        elif cred_type == 'MSFT':
+            opts.set_opt('AUTH_TOKEN', cred._access_token)
+            opts.set_opt('AUTH_PRINCIPAL', cred._principal)
+            opts.set_opt('AUTH_SECRET', cred._secret)
+            opts.set_opt('AUTH_TENANT', cred._tenant)
             pass
 
         elif cred_type == 'GCP':
@@ -114,8 +118,8 @@ class CredentialStoreConnector(collections.abc.Mapping):
             cred_type = 'API'
         elif isinstance(cred, stratustryke.core.credential.AWSCredential):
             cred_type = 'AWS'
-        elif isinstance(cred, stratustryke.core.credential.AzureCredential):
-            cred_type = 'Azure'
+        elif isinstance(cred, stratustryke.core.credential.MicrosoftCredential):
+            cred_type = 'MSFT'
         elif isinstance(cred, stratustryke.core.credential.GCPCredential):
             cred_type = 'GCP'
         else:
