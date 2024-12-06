@@ -44,7 +44,7 @@ class Module(AzureModule):
             account_id = entry.get('id', None)
             if account_id != None: ret.append(account_id)
 
-        return ret
+        return res.status_code, ret
     
 
     def list_runbooks(self, account_path: str) -> list:
@@ -129,11 +129,19 @@ class Module(AzureModule):
 
             self.framework.print_status(f'Retrieving automation accounts within subscription {subscription}')
             
-            accounts = self.list_automation_accounts(subscription)
+            status, accounts = self.list_automation_accounts(subscription)
+
+            if status != 200:
+                if status == 401:
+                    self.framework.print_failure(f'[{status} Response] Not authorized to list accounts in this subscription')
+                elif status == 404:
+                    self.framework.print_warning(f'[{status} Response] Subscription not found, skipping')
+                else: self.framework.print_failure(f'[{status} Response] Unable to list automation accounts')
+                continue
 
             if len(accounts) > 0:
                 self.framework.print_status(f'Searching for runbooks within {len(accounts)} automation accounts')
-            else: self.framework.print_failure(f'No automation accounts found in {subscription}')
+            else: self.framework.print_failure(f'[{status} Response] No automation accounts found in {subscription}')
 
             for account_path in accounts:
                 runbooks = self.list_runbooks(account_path)
@@ -146,7 +154,9 @@ class Module(AzureModule):
                         status, content, extension = self.get_runbook_content(runbook_path)
 
                         if status != 200:
-                            self.framework.print_failure(f'{status} Response - Unable to download runbook content')
+                            if status == 401:
+                                self.framework.print_failure(f'[{status} Response] Not authorized to retrieve runbook content')
+                            else: self.framework.print_failure(f'[{status} Response] Unable to download runbook content')
                         
                         else:
                             name_start = runbook_path.rfind('/')
@@ -160,7 +170,8 @@ class Module(AzureModule):
 
                             except Exception as err:
                                 self.framework.print_error(f'Error writing runbook to disk: {err}')
-                            
+                                
+        return None
 
 
 

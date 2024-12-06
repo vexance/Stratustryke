@@ -10,6 +10,7 @@ from os import linesep
 from http.client import responses as httpresponses
 from requests import request, Response
 from pathlib import Path
+import urllib3
 
 class StratustrykeModule(object):
     def __init__(self, framework) -> None:
@@ -21,6 +22,8 @@ class StratustrykeModule(object):
             'References': False # list[str] External references pertaining to the module
         }
         self._options = Options()
+
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     @property
     def desc(self) -> str:
