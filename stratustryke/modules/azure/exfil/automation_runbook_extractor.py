@@ -26,7 +26,7 @@ class Module(AzureModule):
     
     @property
     def search_name(self):
-        return f'aws/exfil/authed/{self.name}'
+        return f'azure/exfil/authed/{self.name}'
     
 
     def list_automation_accounts(self, subscription: str) -> list:
@@ -112,8 +112,6 @@ class Module(AzureModule):
         else: self.logger.warn(f'Could not interpret runbook file extension from Content-Type {content_type}')
 
         return ext
-
-
 
 
     def run(self):
