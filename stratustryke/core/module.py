@@ -239,7 +239,7 @@ class StratustrykeModule(object):
     #   pass
 
 
-
+# Modules to interact with AWS cloud resources / services
 class AWSModule(StratustrykeModule):
     def __init__(self, framework) -> None:
         super().__init__(framework)
@@ -280,7 +280,7 @@ class AWSModule(StratustrykeModule):
         return stratustryke.core.credential.AWSCredential(f'{self.name}', access_key=access_key, secret_key=secret, session_token=token, default_region=cred_region)
         
 
-# Todo
+# Microsoft365 Modules to interact with M365 or Entra
 class M365Module(StratustrykeModule):
     def __init__(self, framework) -> None:
         super().__init__(framework)
@@ -304,14 +304,12 @@ class M365Module(StratustrykeModule):
 
         return stratustryke.core.credential.MicrosoftCredential(f'{self.name}', principal=principal, secret=secret, tenant=tenant, access_token=access_token)
 
-    
 
-# Todo:
+# Microsft modules to interact with azure subscriptions
 class AzureModule(M365Module):
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, framework) -> None:
+        super().__init__(framework)
         self._options.add_string('AZ_SUBSCRIPTION', 'Target Azure subscription identifier(s) [S/F/P]', True)
-        self._cred = None
 
 
     @property
