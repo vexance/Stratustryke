@@ -310,13 +310,13 @@ class M365Module(StratustrykeModule):
 class AzureModule(M365Module):
     def __init__(self) -> None:
         super().__init__()
-        self._options.add_string('AZ_SUBSCRIPTION', 'Target Azure subscription id []', False, AWS_DEFAULT_REGION)
+        self._options.add_string('AZ_SUBSCRIPTION', 'Target Azure subscription identifier(s) [S/F/P]', True)
         self._cred = None
 
 
     @property
     def search_name(self):
-        return f'az/{self.name}'
+        return f'azure/{self.name}'
 
 
         
