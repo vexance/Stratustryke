@@ -1,6 +1,5 @@
 from stratustryke.core.module import AzureModule
 from stratustryke.core.lib import module_data_dir
-import requests
 import json
 from pathlib import Path
 
@@ -19,7 +18,7 @@ class Module(AzureModule):
         # self._options.add_string('RUNBOOK_PREFIX', 'Prefix for runbooks to include (default: ALL) [S/F/P]', False)
         self._options.add_string('DOWNLOAD_DIR', 'Directory files will be downloaded to', True, module_data_dir(self.name))
         self._options.add_boolean('VERBOSE', 'When enabled, prints runbook tags, description and parameters', True, True)
-        self._options.add_boolean('NO_DOWNLOAD', 'When enabled, disables source code download and only enumerates configs', False, True)
+        self._options.add_boolean('DOWNLOAD', 'When enabled, enables source code download as well as config enum', True, True)
         
         self.auth_token = None
 
@@ -117,9 +116,10 @@ class Module(AzureModule):
     def run(self):
 
         self.auth_token = self.get_cred().access_token()
-        subscriptions = self.get_opt_multiline('AZ_SUBSCRIPTION')
+        subscriptions = self.get_opt_az_subscription()        
+
         verbose = self.get_opt('VERBOSE')
-        download = (not self.get_opt('NO_DOWNLOAD'))
+        download = self.get_opt('DOWNLOAD')
         download_dir = self.get_opt('DOWNLOAD_DIR')
         download_path = str(Path(download_dir).resolve().absolute())
         # account_prefixes = self.get_opt_multiline('ACCOUNT_PREFIX')
