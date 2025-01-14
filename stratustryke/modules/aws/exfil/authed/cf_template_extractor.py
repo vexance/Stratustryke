@@ -24,7 +24,7 @@ class Module(AWSModule):
         return f'aws/exfil/authed/{self.name}'
     
 
-    def list_stacks(self) -> str:
+    def list_stacks(self) -> list:
         session = self.get_cred().session()
         stacks = []
         
