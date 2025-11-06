@@ -17,7 +17,7 @@ class Module(AWSModule):
         self._options.add_integer('TIMEDELTA_DAYS', 'Time period in days of events to include (1-90)', True, 14)
         self._options.add_boolean('ONLY_READ', 'When enabled, skips inspection of non-readonly events', True, False)
 
-        self._arn_search_regex = "(\"|\s)(arn:aws:[a-z0-9]+:[a-z0-9\-]*:(|[0-9]{12}):[^\s\"]+)(\"|\s)"
+        self._arn_search_regex = "(\"|\\s)(arn:aws:[a-z0-9]+:[a-z0-9\\-]*:(|[0-9]{12}):[^\\s\"]+)(\"|\\s)"
 
 
 

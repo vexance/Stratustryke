@@ -105,7 +105,7 @@ class Module(AWSModule):
             self.framework.print_status('Starting query for non-ReadOnly CloudTrail Insights events')
             self.fetch_records(False)
 
-        principals = self.lines_from_string_opt('PRINCIPAL_ARN', unique=True)
+        principals = self.get_opt_multiline('PRINCIPAL_ARN', unique=True)
         if principals == None: principals = [f'{key}' for key in self.trail_events.keys()]
 
         for arn in principals:
