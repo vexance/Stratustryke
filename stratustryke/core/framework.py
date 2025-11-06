@@ -62,7 +62,7 @@ class StratustrykeFramework(object):
         self._config.add_string('FIREPROX_CRED_ALIAS', 'Credential alias to use for management of fireprox APIs', True, stratustryke.settings.FIREPROX_CRED_ALIAS)
         self._config.add_string('DEFAULT_TABLE_FORMAT', 'Default outputing format for table output', True, stratustryke.settings.DEFAULT_TABLE_FORMAT)
         self._config.add_string('WORKSPACE', 'Workspace to filter credential objects in the stratustryke sqlite credstore', True, stratustryke.settings.DEFAULT_WORKSPACE)
-        self._config.add_string('HTTP_PROXY', 'Proxy (schema://host:port) for modules to use as an HTTP/S proxy for web traffic', False, None, '(http[s]?|socks[45][h]?)[:]\/\/.*[:][0-9]{1,5}')
+        self._config.add_string('HTTP_PROXY', 'Proxy (schema://host:port) for modules to use as an HTTP/S proxy for web traffic', False, None, '(http[s]?|socks[45][h]?)[:]\\/\\/.*[:][0-9]{1,5}')
         self._config.add_boolean('HTTP_VERIFY_SSL', 'Enable or disable SSL/TLS verification when modules perform manual HTTP requests', True, stratustryke.settings.HTTP_VERIFY_SSL)
         self._config.add_boolean('HTTP_STSK_HEADER', 'Enable / disable submission of X-Stratustryke-Header for custom HTTP requests', True, stratustryke.settings.HTTP_STSK_HEADER)
 
@@ -142,7 +142,7 @@ class StratustrykeFramework(object):
     def print_success(self, msg: str) -> None:
         '''Prints (green) success message: [+] {msg}'''
         use_color = self._config.get_val('COLORED_OUTPUT')
-        prefix = colored('[+] ', 'green', attrs=('bold',)) if use_color else '[+] '
+        prefix = colored('[+]', 'green', attrs=('bold',)) if use_color else '[+] '
         output = f'{prefix} {msg}{os.linesep}'
         
         self._stdout.write(output)
@@ -153,7 +153,7 @@ class StratustrykeFramework(object):
     def print_failure(self, msg: str) -> None:
         '''Prints (red) failure (not error!) message: [-] {msg}'''
         use_color = self._config.get_val('COLORED_OUTPUT')
-        prefix = colored('[-] ', 'red', attrs=('bold',)) if use_color else '[-] '
+        prefix = colored('[-]', 'red', attrs=('bold',)) if use_color else '[-] '
         output = f'{prefix} {msg}{os.linesep}'
         
         self._stdout.write(output)

@@ -127,8 +127,6 @@ class Module(AWSModule):
 
     
     def run(self):
-
-
         matches = self.list_lambdas()
         self.framework.print_status(f'Attempting to extract code for {len(matches)} function(s)...')
 

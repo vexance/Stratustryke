@@ -11,6 +11,7 @@ import stratustryke.core.framework
 import stratustryke.settings
 import stratustryke.core.lib
 import stratustryke.core.credential
+from re import match as regex_match
 from termcolor import colored
 from time import sleep
 import os
@@ -133,8 +134,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         intro = os.linesep
         intro += '        ______           __           __           __           ' + os.linesep
         intro += '       / __/ /________ _/ /___ _____ / /_______ __/ /_____      ' + os.linesep
-        intro += '      _\ \/ __/ __/ _ `/ __/ // (_-</ __/ __/ // /  \'_/ -_)     ' + os.linesep
-        intro += '     /___/\__/_/  \_,_/\__/\_,_/___/\__/_/  \_, /_/\_\\__/      ' + os.linesep
+        intro += '      _\\ \\/ __/ __/ _ `/ __/ // (_-</ __/ __/ // /  \'_/ -_)     ' + os.linesep
+        intro += '     /___/\\__/_/  \\_,_/\\__/\\_,_/___/\\__/_/  \\_, /_/\\_\\__/      ' + os.linesep
         intro += '                                           /___/                ' + os.linesep
         intro += os.linesep
         intro += f'     {stratustryke.__progname__} v{stratustryke.__version__}{os.linesep}' 
@@ -898,14 +899,14 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Text Completion: Completes <type> with 'aws', 'azure', 'gcp', 'generic', 'm365'
 
     @stratustryke.core.command.command('Import a credential into the framework\'s credential manager')
-    @stratustryke.core.command.argument('cred_type', metavar='type', choices=('AWS', 'aws', 'AZURE', 'Azure', 'azure', 'M365', 'm365', 'GCP', 'gcp', 'GENERIC', 'Generic', 'generic'), help = 'Type of credential to import')
+    @stratustryke.core.command.argument('cred_type', metavar='type', choices=('aws', 'amazon', 'az', 'azure', 'm365', 'token', 'generic'), help = 'Type of credential to import')
     @stratustryke.core.command.argument('cred_alias', metavar='alias', help = 'Alias name for the credential to import (must be unique amongst cred aliases)')
     @stratustryke.core.command.argument('workspace', default=stratustryke.settings.DEFAULT_WORKSPACE, nargs='?', help = f'Workspace to import the credential into [default: \'{stratustryke.settings.DEFAULT_WORKSPACE}]\'')
     def do_mkcred(self, args):
        
-        if args.cred_type in ['AWS', 'aws']:
+       # AWS principal creds (access keys)
+        if args.cred_type in ['aws', 'amazon']:
 
-            self.framework.print_line('create an aws cred')
             access_key = input('  AWS Access Key Id: ')
             self.framework.spool_message(f'  AWS Access Key Id: {access_key}{os.linesep}')
             secret_key = input('  AWS Secret Access Key: ')
@@ -926,6 +927,49 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
             self.framework.credentials.store_credential(cred)
 
 
+        # Microsft / M365 / Azure Credential (for microsoft graph)
+        elif args.cred_type in ['az', 'azure', 'm365']:
+            tenant = input('  Tenant Id [default]: ').strip()
+            if tenant == '': tenant = None
+            
+            principal = input('  Principal Name [interactive]: ').strip()
+            self.framework.spool_message(f'Principal Name [interactive]: {principal}{os.linesep}')
+
+            if principal == '' or principal == None:
+                self.framework.spool_message('Starting interactive authentication...')
+                cred = stratustryke.core.credential.MicrosoftCredential(args.cred_alias, args.workspace, tenant=tenant, interactive=True)
+                cred.store_token()
+
+            else:
+                if regex_match('^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', principal):    
+                    self.framework.spool_message(f'  Detected appication service principal (UUID){os.linesep}')
+                    secret = input('  Application Client Secret: ')
+                    self.framework.spool_message(f'  Application Client Secret: <REDACTED>{os.linesep}')
+                
+                elif '@' in principal:
+                    self.framework.spool_message(f'  Detected liekly user principal (email address){os.linesep}')
+                    secret = input('  Prinicpal Authentication Secret: ')
+                    self.framework.spool_message(f'  Principal Authentication Secret: <REDACTED>{os.linesep}')
+
+                else:
+                    self.framework.print_error('User principals must be supplied as full email addresses')
+                    return None
+                
+                scope = stratustryke.core.credential.AZ_MGMT_TOKEN_SCOPE if (args.cred_type == 'm365') else stratustryke.core.credential.AZ_MGMT_TOKEN_SCOPE
+                cred = stratustryke.core.credential.MicrosoftCredential(args.cred_alias, args.workspace, tenant=tenant, principal=principal, secret=secret, token_scope=scope)
+                
+                try:
+                    token = cred.access_token()
+                    if token == None: raise Exception('No access token received during authentication.')
+                except Exception as err:
+                    self.framework.print_error(f'Unable to retrieve access token: {err}')
+
+            self.framework.credentials.store_credential(cred)
+        
+        elif args.cred_type in ['generic', 'token']:
+            self.framework.print_error('Generic auth tokens not yet supported')
+
+        
         else: # Not a support cred type? But somehow was in the 
             self.framework.print_warning(f'Credential type \'{args.cred_type}\' not currently supported')
 
