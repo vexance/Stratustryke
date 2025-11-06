@@ -1,5 +1,6 @@
 from stratustryke.core.module import AzureModule
 from stratustryke.core.lib import module_data_dir
+from stratustryke.core.credential import AZ_MGMT_TOKEN_SCOPE
 import json
 from pathlib import Path
 
@@ -115,7 +116,7 @@ class Module(AzureModule):
 
     def run(self):
 
-        self.auth_token = self.get_cred().access_token()
+        self.auth_token = self.get_cred().access_token(scope=AZ_MGMT_TOKEN_SCOPE)
         subscriptions = self.get_opt_az_subscription()        
 
         verbose = self.get_opt('VERBOSE')
@@ -141,7 +142,7 @@ class Module(AzureModule):
 
             if len(accounts) > 0:
                 self.framework.print_status(f'Searching for runbooks within {len(accounts)} automation accounts')
-            else: self.framework.print_failure(f'[{status} Response] No automation accounts found in {subscription}')
+            else: self.framework.print_warning(f'[{status} Response] No automation accounts found in {subscription}')
 
             for account_path in accounts:
                 runbooks = self.list_runbooks(account_path)

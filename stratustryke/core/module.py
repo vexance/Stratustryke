@@ -248,8 +248,8 @@ class AWSModule(StratustrykeModule):
     def __init__(self, framework) -> None:
         super().__init__(framework)
         self._options.add_string('AUTH_ACCESS_KEY_ID', 'AWS access key id for authentication', True, regex = '(?:A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}')
-        self._options.add_string('AUTH_SECRET_KEY', 'AWS secret key to use for authentication', True, regex='[0-9a-zA-Z\/+]{40}', sensitive=True)
-        self._options.add_string('AUTH_SESSION_TOKEN', 'AWS session token for temporary credential authentication', regex='[0-9a-zA-Z\/+]{364}', sensitive=True)
+        self._options.add_string('AUTH_SECRET_KEY', 'AWS secret key to use for authentication', True, regex='[0-9a-zA-Z\\/+]{40}', sensitive=True)
+        self._options.add_string('AUTH_SESSION_TOKEN', 'AWS session token for temporary credential authentication', regex='[0-9a-zA-Z\\/+]{364}', sensitive=True)
         self._options.add_string('AWS_REGION', 'AWS region to specify within calls', False, AWS_DEFAULT_REGION)
         self._cred = None
 
@@ -328,10 +328,9 @@ class AzureModule(M365Module):
 
 
         if subscriptions == [] or subscriptions == None:
-            print('Automatically getting subs')
+            subscriptions = []
             subs = self.list_subscriptions()
             for tenant, sub in subs:
-                print(f'Tenant: {tenant} | Subscription: {sub}')
                 self.framework.print_status(f'Found accessible subscription {sub}')
                 subscriptions.append(sub)
         

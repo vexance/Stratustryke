@@ -1,5 +1,6 @@
 from stratustryke.core.module import AzureModule
 from stratustryke.core.lib import module_data_dir
+from stratustryke.core.credential import AZ_MGMT_TOKEN_SCOPE
 import json
 from pathlib import Path
 
@@ -94,14 +95,14 @@ class Module(AzureModule):
         ret = []
         headers = {'Authorization': f'Bearer {self.auth_token}'}
         group_ids = self.list_resource_groups(subscription)
-        print(group_ids)
+        self.framework.print_status(f'Identified {len(group_ids)} resource groups in subscription {subscription}')
         # Resource Group Id format is /subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROU_NAME"
 
         if len(group_ids) < 1:
              self.framework.print_failure(f'No resource-group-level deployment parameters found')
 
         for resource_group in group_ids:
-            endpoint = f'GET https://management.azure.com{resource_group}/providers/Microsoft.Resources/deployments/?api-version=2021-04-01'
+            endpoint = f'https://management.azure.com{resource_group}/providers/Microsoft.Resources/deployments/?api-version=2025-04-01'
             res = self.http_request('GET', endpoint, headers=headers)
             deployments = json.loads(res.text).get('value', [])
             
@@ -131,7 +132,7 @@ class Module(AzureModule):
 
     def run(self) -> None:
         
-        self.auth_token = self.get_cred().access_token()
+        self.auth_token = self.get_cred().access_token(scope=AZ_MGMT_TOKEN_SCOPE)
         subscriptions = self.get_opt_az_subscription()
 
         self.framework.print_status(f'Attempting to retrieve tenant-level deployment parameters...')

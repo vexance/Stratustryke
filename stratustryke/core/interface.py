@@ -134,8 +134,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         intro = os.linesep
         intro += '        ______           __           __           __           ' + os.linesep
         intro += '       / __/ /________ _/ /___ _____ / /_______ __/ /_____      ' + os.linesep
-        intro += '      _\ \/ __/ __/ _ `/ __/ // (_-</ __/ __/ // /  \'_/ -_)     ' + os.linesep
-        intro += '     /___/\__/_/  \_,_/\__/\_,_/___/\__/_/  \_, /_/\_\\__/      ' + os.linesep
+        intro += '      _\\ \\/ __/ __/ _ `/ __/ // (_-</ __/ __/ // /  \'_/ -_)     ' + os.linesep
+        intro += '     /___/\\__/_/  \\_,_/\\__/\\_,_/___/\\__/_/  \\_, /_/\\_\\__/      ' + os.linesep
         intro += '                                           /___/                ' + os.linesep
         intro += os.linesep
         intro += f'     {stratustryke.__progname__} v{stratustryke.__version__}{os.linesep}' 
@@ -955,7 +955,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
                     self.framework.print_error('User principals must be supplied as full email addresses')
                     return None
                 
-                cred = stratustryke.core.credential.MicrosoftCredential(args.cred_alias, args.workspace, tenant=tenant, principal=principal, secret=secret)
+                scope = stratustryke.core.credential.AZ_MGMT_TOKEN_SCOPE if (args.cred_type == 'm365') else stratustryke.core.credential.AZ_MGMT_TOKEN_SCOPE
+                cred = stratustryke.core.credential.MicrosoftCredential(args.cred_alias, args.workspace, tenant=tenant, principal=principal, secret=secret, token_scope=scope)
                 
                 try:
                     token = cred.access_token()

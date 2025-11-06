@@ -8,6 +8,14 @@ from requests_auth_aws_sigv4 import AWSSigV4
 from re import match as regex_match
 import azure.identity
 
+
+AWS_ROLE_ARN_REGEX = '^arn:aws:iam::[0-9]{12}:role/.*$'
+AZ_CLI_CLIENT_ID = '04b07795-8ddb-461a-bbee-02f9e1bf7b46'
+AZ_MGMT_TOKEN_SCOPE = 'https://management.azure.com/.default'
+M365_GRAPH_TOKEN_SCOPE = 'https://graph.microsoft.com/.default'
+UUID_LOWERCASE_REGEX = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+
+
 class Credential:
     def __init__(self, alias: str, workspace: str = DEFAULT_WORKSPACE, verfied: bool = False, from_dict: str = None):
         if from_dict != None:
@@ -187,7 +195,7 @@ class AWSCredential(CloudCredential):
         '''
 
         # If an arn isn't supplied, attempt to use the input as a name of a role within the caller's account
-        if not regex_match('^arn:aws:iam::[0-9]{12}:role/.*$', role):
+        if not regex_match(AWS_ROLE_ARN_REGEX, role):
             role = f'arn:aws:iam::{self._account_id}:role/{role}'
 
         # Check / fix args
@@ -238,7 +246,7 @@ class MicrosoftCredential(CloudCredential):
     def __init__(self, alias: str, workspace: str = DEFAULT_WORKSPACE, verified: bool = False, 
         acc_id: str = None, cred_id: str = None, from_dict: dict = None, principal: str = None, secret: str = None,
         tenant: str = None, interactive: bool = False, access_token: str = None,
-        token_scope: str = 'https://graph.microsoft.com/.default'):
+        token_scope: str = M365_GRAPH_TOKEN_SCOPE):
 
         if from_dict != None:
             return super().__init__(alias, from_dict=from_dict)
@@ -280,11 +288,11 @@ class MicrosoftCredential(CloudCredential):
             raise StratustrykeException('Attempting to re-scope existing Microsoft Graph access token')
         
         TOKEN_SCOPE = scope if (scope != None) else self._token_scope
-        AZURE_CLI_CLIENT_ID = '04b07795-8ddb-461a-bbee-02f9e1bf7b46'
+        
 
         if (self._interactive) or (self._principal == None and self._secret == None):
             try:
-                cred = azure.identity.DeviceCodeCredential(client_id=AZURE_CLI_CLIENT_ID, tenant_id=self._tenant)
+                cred = azure.identity.DeviceCodeCredential(client_id=AZ_CLI_CLIENT_ID, tenant_id=self._tenant)
             except Exception as err:
                 raise StratustrykeException(f'Error getting interactive browser credentials: {err}')
         
@@ -294,10 +302,10 @@ class MicrosoftCredential(CloudCredential):
 
             try:
                 # Likely service principal as this is set as a UUID
-                if regex_match('^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', self._principal):
+                if regex_match(UUID_LOWERCASE_REGEX, self._principal):
                     cred = azure.identity.ClientSecretCredential(tenant_id=self._tenant, client_id=self._principal, client_secret=self._secret)
                 else:  # Can't be a service principal; use default client_id for azure CLI
-                    cred = azure.identity.UsernamePasswordCredential(tenant_id=self._tenant, username=self._principal, password=self._secret, client_id=AZURE_CLI_CLIENT_ID)
+                    cred = azure.identity.UsernamePasswordCredential(tenant_id=self._tenant, username=self._principal, password=self._secret, client_id=AZ_CLI_CLIENT_ID)
 
             except Exception as err:
                 raise StratustrykeException(f'Error during service principal / user auth: {err}')
@@ -324,3 +332,4 @@ class GCPCredential(CloudCredential):
 
     def __str__(self) -> str:
         return super().__str__()
+
