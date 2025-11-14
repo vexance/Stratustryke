@@ -1,0 +1,94 @@
+
+from re import fullmatch
+
+from stratustryke.core.module import AWSModule
+from stratustryke.core.credential import AWS_ROLE_ARN_REGEX
+
+
+class Module(AWSModule):
+
+    OPT_SKIP_IMPORT = 'SKIP_IMPORT'
+    OPT_ALIAS = 'ALIAS'
+    OPT_WORKSPACE = 'WORKSPACE'
+    OPT_TARGET_ROLE = 'TARGET_ROLE'
+    OPT_EXTERNAL_ID = 'EXTERNAL_ID'
+    OPT_DURATION = 'DURATION'
+    OPT_SESSION_NAME = 'SESSION_NAME'
+
+
+    def __init__(self, framework) -> None:
+        super().__init__(framework)
+        self._info = {
+            'Authors': ['@vexance'],
+            'Description': 'Create new AWS credstore credential via sts:AssumeRole call',
+            'Details': 'Performs an sts:AssumeRole call with the supplied options. Optionally, import the credentials into the stratustryke credstore',
+            'References': ['']
+        }
+
+        self._options.add_string(Module.OPT_SKIP_IMPORT, 'When enabled, do not import the credential', False, False)
+        self._options.add_string(Module.OPT_ALIAS, 'Name of alias for cred import [principal name when unset]', False, True)
+        self._options.add_string(Module.OPT_WORKSPACE, 'Workspace for cred import [framework default when unset]', True, self.framework._config.get_val(Module.OPT_WORKSPACE))
+        self._options.add_string(Module.OPT_TARGET_ROLE, 'Target ARN/Name of role to assume', True)
+        self._options.add_string(Module.OPT_EXTERNAL_ID, 'External Id, if necessary, to use in the call', False, sensitive=True) # can sometimes be sensitive, so we'll play it safe
+        self._options.add_integer(Module.OPT_DURATION, 'Time (in minutes [15 - ]) for credentials to be valid for', True, 15)
+        self._options.add_string(Module.OPT_SESSION_NAME, 'Name to designate for the assumed role session', False, 'stratustryke')
+
+
+    @property
+    def search_name(self):
+        return f'aws/sts/util/{self.name}'
+    
+
+    def get_role_arns(self, default_account_id: str) -> list:
+        '''Iterate through arns; return full ARN in the caller's region if a suspected name was provided'''
+        provided_arn = self.get_opt_multiline(Module.OPT_TARGET_ROLE)
+        ret = []
+
+        for entry in provided_arn:
+            if not fullmatch(AWS_ROLE_ARN_REGEX, entry):
+                interpretted_arn = f'arn:aws:iam::{default_account_id}:role/{entry}'
+                self.framework.print_warning(f'Interpreting {entry} {interpretted_arn}')
+                ret.append(interpretted_arn)
+            else:
+                ret.append(entry)
+
+        if len(ret) > 1:
+            self.framework.print_status(f'Ingested {len(ret)} targets')
+
+        return ret
+
+
+    def run(self):
+        cred = self.get_cred()
+        alias = self.get_opt(Module.OPT_ALIAS)
+        workspace = self.get_opt(Module.OPT_WORKSPACE)
+        ext_id = self.get_opt(Module.OPT_EXTERNAL_ID)
+        duration = self.get_opt(Module.OPT_DURATION) # * 60 # API requires duration in seconds
+        session_name = self.get_opt(Module.OPT_SESSION_NAME)
+        region = self.get_opt(Module.OPT_AWS_REGION)
+
+        skip_import = self.get_opt(Module.OPT_SKIP_IMPORT)
+        verbose_output = self.get_opt(Module.OPT_VERBOSE)
+        arns = self.get_role_arns(cred.account_id)
+
+
+        for arn in arns:
+            try:
+                assumed_role_cred = cred.assume_role(arn, ext_id=ext_id, duration=duration, region=region, session_name=session_name, workspace=workspace, alias=alias)
+
+                if (verbose_output):
+                    self.framework.print_success(f'Successfully performed sts:AssumeRole for {arn}')
+                    self.framework.print_line(f'AWS_ACCESS_KEY_ID={assumed_role_cred._access_key_id}')
+                    self.framework.print_line(f'AWS_SECRET_ACCESS_KEY={assumed_role_cred._secret_key}')
+                    self.framework.print_line(f'AWS_SESSION_TOKEN={assumed_role_cred._session_token}')
+                
+                if not skip_import:
+                    self.framework.credentials.store_credential(assumed_role_cred)
+                
+                return True
+
+            except Exception as err:
+                self.framework.print_failure(f'Failed to sts:AssumeRole on {arn}')
+                if (verbose_output): self.framework.print_failure(str(err))
+                return False
+        
