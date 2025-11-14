@@ -14,6 +14,9 @@ from pathlib import Path
 import urllib3
 
 class StratustrykeModule(object):
+
+    OPT_VERBOSE = 'VERBOSE'
+
     def __init__(self, framework) -> None:
         self.framework = framework
         self._info = { # set to false here to verify authors put this info in
@@ -23,6 +26,7 @@ class StratustrykeModule(object):
             'References': False # list[str] External references pertaining to the module
         }
         self._options = Options()
+        self._options.add_boolean(StratustrykeModule.OPT_VERBOSE, 'When enabled, increases verbosity of module output', False, False)
 
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -245,12 +249,19 @@ class StratustrykeModule(object):
 
 # Modules to interact with AWS cloud resources / services
 class AWSModule(StratustrykeModule):
+
+
+    OPT_ACCESS_KEY = 'AUTH_ACCESS_KEY_ID'
+    OPT_SECRET_KEY = 'AUTH_SECRET_KEY'
+    OPT_SESSION_TOKEN = 'AUTH_SESSION_TOKEN'
+    OPT_AWS_REGION = 'AWS_REGION'
+
     def __init__(self, framework) -> None:
         super().__init__(framework)
-        self._options.add_string('AUTH_ACCESS_KEY_ID', 'AWS access key id for authentication', True, regex = '(?:A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}')
-        self._options.add_string('AUTH_SECRET_KEY', 'AWS secret key to use for authentication', True, regex='[0-9a-zA-Z\\/+]{40}', sensitive=True)
-        self._options.add_string('AUTH_SESSION_TOKEN', 'AWS session token for temporary credential authentication', regex='[0-9a-zA-Z\\/+]{364}', sensitive=True)
-        self._options.add_string('AWS_REGION', 'AWS region to specify within calls', False, AWS_DEFAULT_REGION)
+        self._options.add_string(AWSModule.OPT_ACCESS_KEY, 'AWS access key id for authentication', True, regex = '(?:A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}')
+        self._options.add_string(AWSModule.OPT_SECRET_KEY, 'AWS secret key to use for authentication', True, regex='[0-9a-zA-Z\\/+]{40}', sensitive=True)
+        self._options.add_string(AWSModule.OPT_SESSION_TOKEN, 'AWS session token for temporary credential authentication', regex='[0-9a-zA-Z\\/+]{364}', sensitive=True)
+        self._options.add_string(AWSModule.OPT_AWS_REGION, 'AWS region(s) to specify within calls', False, AWS_DEFAULT_REGION)
         self._cred = None
 
 
@@ -266,8 +277,8 @@ class AWSModule(StratustrykeModule):
             return (valid, msg)
 
         # Temporary creds (from STS service 'ASIA...') require a session token
-        key_prefix = self.get_opt('AUTH_ACCESS_KEY_ID')[0:3]
-        token = self.get_opt('AUTH_SESSION_TOKEN')
+        key_prefix = self.get_opt(AWSModule.OPT_ACCESS_KEY)[0:3]
+        token = self.get_opt(AWSModule.OPT_SESSION_TOKEN)
         if ((token == '' or token == None)  and key_prefix in ['ASIA']):
             return (False, f'Session token required for temporary STS credential \'{self.auth_access_key_id.value}\'')
 
@@ -276,10 +287,10 @@ class AWSModule(StratustrykeModule):
 
 
     def get_cred(self, region: str = None):
-        access_key = self.get_opt('AUTH_ACCESS_KEY_ID')
-        secret = self.get_opt('AUTH_SECRET_KEY')
-        token = self.get_opt('AUTH_SESSION_TOKEN')
-        cred_region = region if (region != None) else self.get_opt('AWS_REGION')
+        access_key = self.get_opt(AWSModule.OPT_ACCESS_KEY)
+        secret = self.get_opt(AWSModule.OPT_SECRET_KEY)
+        token = self.get_opt(AWSModule.OPT_SESSION_TOKEN)
+        cred_region = region if (region != None) else self.get_opt(AWSModule.OPT_AWS_REGION)
 
         return stratustryke.core.credential.AWSCredential(f'{self.name}', access_key=access_key, secret_key=secret, session_token=token, default_region=cred_region)
         
@@ -288,7 +299,7 @@ class AWSModule(StratustrykeModule):
 class M365Module(StratustrykeModule):
     def __init__(self, framework) -> None:
         super().__init__(framework)
-        self._options.add_string('AUTH_TOKEN', 'Pre-existing access token for Microsoft Graph; overrides other AUTH_ options', False, sensitive=True)
+        self._options.add_string('AUTH_TOKEN', 'Pre-existing access token for Microsoft Graph; overrides other AUTH_* options', False, sensitive=True)
         self._options.add_string('AUTH_PRINCIPAL', 'Entra service principal id, email, or managed identity', False)
         self._options.add_string('AUTH_SECRET', 'Authentication secret (e.g, client secret / password)', False, sensitive=True)
         self._options.add_string('AUTH_TENANT', 'Azure tenant / directory identifer; required if AUTH_TOKEN not set', False, regex='^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
