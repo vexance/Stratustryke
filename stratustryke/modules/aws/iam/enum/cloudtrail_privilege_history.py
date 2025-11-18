@@ -1,4 +1,4 @@
-from stratustryke.core.module import AWSModule
+from stratustryke.core.module.aws import AWSModule
 from stratustryke.core.lib import StratustrykeException
 from datetime import datetime, timedelta
 import json
@@ -20,7 +20,7 @@ class Module(AWSModule):
             'References': ['']
         }
 
-        self._options.add_integer(Module.OPT_TIMEDELTA_DAYS, 'Time period in days of events to include (1-90)', True, 7)
+        self._options.add_integer(Module.OPT_TIMEDELTA, 'Time period in days of events to include (1-90)', True, 7)
         self._options.add_boolean(Module.OPT_SKIP_NONREAD, 'When enabled, skips inspection of non-readonly events', True, False)
         self._options.add_string(Module.OPT_PRINCIPAL_ARN, 'When supplied, filter output on the set Principal ARN(s) [S/F/P]', False)
 
@@ -37,7 +37,7 @@ class Module(AWSModule):
         if not valid:
             return (False, msg)
         
-        delta = self.get_opt(Module.OPT_TIMEDELTA_DAYS)
+        delta = self.get_opt(Module.OPT_TIMEDELTA)
         if delta > 90 or delta < 1:
             return (False, 'Time delta must be between 1 and 90')
 
@@ -49,7 +49,7 @@ class Module(AWSModule):
         session = self.get_cred().session()
         
         # Determine timeframe limits
-        delta = self.get_opt(Module.OPT_TIMEDELTA_DAYS)
+        delta = self.get_opt(Module.OPT_TIMEDELTA)
         now = datetime.now()
         query_end = int(now.timestamp())
         query_start = int((now - timedelta(days=delta)).timestamp())

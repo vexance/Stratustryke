@@ -1,4 +1,4 @@
-from stratustryke.core.module import AWSModule
+from stratustryke.core.module.aws import AWSModule
 from pathlib import Path
 from stratustryke.core.lib import StratustrykeException, module_data_dir
 import requests
@@ -7,7 +7,7 @@ import urllib3
 class Module(AWSModule):
 
     OPT_LAMBDA_PREFIX = 'LAMBDA_PREFIX'
-    OPT_ALL_VERSION = 'ALL_VERSIONS'
+    OPT_ALL_VERSIONS = 'ALL_VERSIONS'
     OPT_DOWNLOAD_DIR = 'DOWNLOAD_DIR'
     OPT_NO_DOWNLOAD = 'NO_DOWNLOAD'
 

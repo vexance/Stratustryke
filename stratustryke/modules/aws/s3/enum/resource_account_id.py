@@ -1,4 +1,4 @@
-from stratustryke.core.module import AWSModule
+from stratustryke.core.module.aws import AWSModule
 from stratustryke.core.credential import AWSCredential
 from stratustryke.core.lib import StratustrykeException
 
@@ -90,7 +90,6 @@ class Module(AWSModule):
             client = session.client('s3')
 
             if prefix != None:
-                print('prefix')
                 res = client.head_object(Bucket=bucket, Key=prefix)
                 return True
             

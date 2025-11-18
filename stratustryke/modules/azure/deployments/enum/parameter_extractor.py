@@ -1,4 +1,4 @@
-from stratustryke.core.module import AzureModule
+from stratustryke.core.module.azure import AzureModule
 from stratustryke.core.lib import module_data_dir
 from stratustryke.core.credential import AZ_MGMT_TOKEN_SCOPE
 import json
@@ -24,7 +24,7 @@ class Module(AzureModule):
     
     @property
     def search_name(self):
-        return f'azure/exfil/authed/{self.name}'
+        return f'azure/deployments/enum/{self.name}'
     
 
     def inspect_tenant_deployments(self) -> list:

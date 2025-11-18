@@ -1,4 +1,4 @@
-from stratustryke.core.module import AWSModule
+from stratustryke.core.module.aws import AWSModule
 import botocore
 
 class Module(AWSModule):

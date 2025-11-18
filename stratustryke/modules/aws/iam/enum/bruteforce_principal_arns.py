@@ -1,4 +1,4 @@
-from stratustryke.core.module import AWSModule
+from stratustryke.core.module.aws import AWSModule
 from pathlib import Path
 import requests
 from stratustryke.core.lib import StratustrykeException

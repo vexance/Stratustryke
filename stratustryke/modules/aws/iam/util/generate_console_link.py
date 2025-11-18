@@ -1,4 +1,4 @@
-from stratustryke.core.module import AWSModule
+from stratustryke.core.module.aws import AWSModule
 from stratustryke.core.credential import AWSCredential
 from stratustryke.core.lib import StratustrykeException
 import requests
@@ -24,7 +24,7 @@ class Module(AWSModule):
         }
 
         self._options.add_integer(Module.OPT_DURATION, 'Duration in minutes for the console session to be valid for', True, 60)
-        self._options.add_string(Module.OPT_SESSION_NAME, 'Name for federated user session if using long-term credentials', False, 'stratustryke', '^[a-zA-Z\_\=,\.\@-]*$')
+        self._options.add_string(Module.OPT_SESSION_NAME, 'Name for federated user session if using long-term credentials', False, 'stratustryke', '^[a-zA-Z_=,.@-]*$')
 
 
     @property

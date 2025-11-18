@@ -1,5 +1,5 @@
 
-from stratustryke.core.module import AWSModule
+from stratustryke.core.module.aws import AWSModule
 from pathlib import Path
 
 class Module(AWSModule):

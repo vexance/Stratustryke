@@ -1,5 +1,5 @@
 
-from stratustryke.core.module import AWSModule
+from stratustryke.core.module.aws import AWSModule
 from stratustryke.core.lib import StratustrykeException
 from datetime import datetime, timedelta
 from pathlib import Path

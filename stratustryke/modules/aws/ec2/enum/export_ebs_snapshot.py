@@ -1,4 +1,4 @@
-from stratustryke.core.module import AWSModule
+from stratustryke.core.module.aws import AWSModule
 from stratustryke.core.lib import StratustrykeException, module_data_dir
 from pathlib import Path
 from time import sleep
@@ -134,7 +134,7 @@ class Module(AWSModule):
                 token = block.get('BlockToken', None)
 
                 if (index == None) or (token == None):
-                    print(block)
+
                     raise StratustrykeException(f'Invalid block index or token at block {i}: Index: {index}; Token: {token}')
                 
                 res = client.get_snapshot_block(SnapshotId=copy_id, BlockIndex=index, BlockToken=token)

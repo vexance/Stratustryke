@@ -224,7 +224,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         elif stratustryke.settings.on_windows:
             os.system('cls')
         else:
-            self.print_line('Unknown system OS is not Linux or Windows')
+            self.print_line(f'Unknown system OS is not Linux or Windows')
 
     def do_cls(self, args):
         '''Alias for command 'clear' '''
@@ -526,6 +526,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         if self.framework.current_module: # get options for current module
             opts = self.framework.current_module._options
             opt_names = self.framework.current_module._options.keys()
+            opt_names.extend(self.framework.current_module._advanced.keys())
         else:
             self.print_line('No module currently in use')
             return
@@ -552,6 +553,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         split = line.split()
         if len(split) < 3: # just 'set ' or 'set blah'
             completions = [f'{i} ' for i in self.framework.current_module._options.keys() if i.startswith(text.upper())]
+            completions.extend(f'{i} ' for i in self.framework.current_module._advanced.keys() if i.startswith(text.upper()))
             
         elif len(split) == 3 and split[2].startswith('file:'):
             if split[2] == 'file:': return []
@@ -686,7 +688,54 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
 
     def complete_options(self, text, line, begidx, endidx):
         return [i for i in self.framework.modules.keys() if i.startswith(text)]
+    
 
+    @stratustryke.core.command.command('Show advanced options for the current or specified module')
+    @stratustryke.core.command.argument('module', nargs='?', help = 'Module to display advanced options for')
+    def do_advanced(self, args):
+        # no module supplied and no current module set
+        if args.module == None: # no module specifed
+            if self.framework.current_module == None: # And no current module set
+                self.print_line('No current module or module supplied to show information for')
+                return
+            mod = self.framework.current_module
+
+        elif args.module in self.framework.modules: # module specified is loaded
+            mod = self.framework.modules[args.module]
+        
+        else: # module specified doesn't exist / isn't loaded
+            self.print_line(f'Module: \'{args.module}\' not found')
+            return
+
+        # Print module normal options
+        self.print_line('') # create space
+        self.print_line('  Module options:')
+        self.print_line('')
+        masking = self.framework._config.get_val('MASK_SENSITIVE')
+        truncating = self.framework._config.get_val('TRUNCATE_OPTIONS')
+        rows = mod.show_options(masking, truncating)
+        headers = ['Module Name', 'Value', 'Required', 'Description']
+        self.framework.print_table(rows, headers, '  ')
+
+
+        rows = mod.show_advanced(masking, truncating)
+        if len(rows) > 0:
+            # Print module advanced options
+            self.print_line('') # create space
+            self.print_line('  Advanced module options:')
+            self.print_line('')
+
+            masking = self.framework._config.get_val('MASK_SENSITIVE')
+            truncating = self.framework._config.get_val('TRUNCATE_OPTIONS')
+            
+            headers = ['Module Name', 'Value', 'Required', 'Description']
+            self.framework.print_table(rows, headers, '  ')
+
+        else: self.print_line('No advanced options for module')
+        self.print_line('') # Create space for prompt
+
+    def complete_advanced(self, text, line, begidx, endidx):
+        return [i for i in self.framework.modules.keys() if i.startswith(text)]
 
     # Command: 'show'
     # Action: Displays various types of information
