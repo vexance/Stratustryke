@@ -49,7 +49,7 @@ The example steps below show at a high level how to write your own Stratustryke 
 1. **Import dependant packages.** All modules are required to inherit from `StratustrykeModule` or one of its child classes. This class must be imported at the top of the module file. In this example, we will be implementing a module that interacts with AWS, so we will use the `AWSModule` to benefit from its built-in methods and attributes.
 
 ```python
-from stratustryke.core.module import AWSModule
+from stratustryke.core.module.aws import AWSModule
 ```
 
 2. **Start Module Class Definition.** All modules must be implemented by the `Module` class. In this case, we are writing an AWS focused module, so our class will inherit from `AWSModule`. Within the class constructor (`__init__()`) we will first call the parent class's constructer, then specify the required module informational details.
