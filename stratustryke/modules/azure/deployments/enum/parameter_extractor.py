@@ -6,6 +6,10 @@ from pathlib import Path
 
 
 class Module(AzureModule):
+
+    OPT_DOWNLOAD_DIR = 'DOWNLOAD_DIR'
+    OPT_PRINT_PARAMS = 'PRINT_PARAMS'
+
     def __init__(self, framework) -> None:
         super().__init__(framework)
         self._info = {
@@ -17,7 +21,9 @@ class Module(AzureModule):
 
         # self._options.add_string('ACCOUNT_PREFIX', 'Prefix for automation accounts to inclde (default: ALL) [S/F/P]')
         # self._options.add_string('RUNBOOK_PREFIX', 'Prefix for runbooks to include (default: ALL) [S/F/P]', False)
-        self._options.add_boolean('VERBOSE', 'When enabled, prints non-String parameter values as well', True, False)
+        self._options.add_boolean(Module.OPT_PRINT_PARAMS, 'When enabled, prints parameter values to framework output', True, True)
+        self._options.add_string(Module.OPT_DOWNLOAD_DIR, 'When set, saves full deployment specification to the directory', False, None)
+
         
         self.auth_token = None
 
@@ -27,34 +33,66 @@ class Module(AzureModule):
         return f'azure/deployments/enum/{self.name}'
     
 
+    def write_deployment_to_file(self, deployment_id: str, content: str) -> bool:
+        '''Returns true|false if file write operation succeeeds'''
+
+        download_dir = self.get_opt(Module.OPT_DOWNLOAD_DIR)
+        if download_dir == None: return True
+
+        # make sure our write directory exists
+        filepath = Path(f'{download_dir}/{deployment_id}')
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+
+        try:
+            with open(filepath, 'w') as f: json.dump(content, f, indent=4)
+            self.print_success(f'Wrote to {filepath}')
+        except Exception as err:
+            self.print_failure(f'Could not write to file: {deployment_id}')
+            if self.verbose: self.print_error(str(err))
+            return False
+        
+        return True
+    
+
     def inspect_tenant_deployments(self) -> list:
         '''List tenant-level deployments'''
 
         ret = []
         headers = {'Authorization': f'Bearer {self.auth_token}'}
-        endpoint = 'https://management.azure.com/providers/Microsoft.Resources/deployments/?api-version=2021-04-01'
+        endpoint = 'https://management.azure.com/providers/Microsoft.Resources/deployments/?api-version=2025-04-01'
 
         res = self.http_request('GET', endpoint, headers=headers)
         deployments = json.loads(res.text).get('value', [])
-
-
         # TODO: Logic to parse response for parameters!!
-        verbose = self.get_opt('VERBOSE')
-        reportable = []
+        ret = []
         for entry in deployments:
-            parameters = entry.get('parameters')
+            try:
 
-            
-            for key in parameters.keys():
-                type = parameters[key].get('type', None)
-                val = parameters[key].get('value', None)
+                deployment_id = entry.get('id', 'UNKNOWN')
+                parameters = entry.get('properties', {}).get('parameters', [])
 
-                if (type == 'String' or verbose) and val != None: reportable.append(f'({type}) {key} {val}')
+                if len(parameters.keys()) > 0:
+                    self.print_status(f'Found parameters for {deployment_id}')
 
-        if len(reportable) < 1:
-            self.framework.print_failure('No tenant-level deployment parameters found')
-        for line in reportable:
-            self.framework.print_success(line)
+                for key in parameters.keys():
+                    type = parameters[key].get('type', None)
+                    val = parameters[key].get('value', None)
+
+                    # if self.verbose and val != None:
+                    
+                    if self.get_opt(Module.OPT_PRINT_PARAMS): self.print_success(f'({type}) {key}: {val}')
+                    ret.append(f'({type}) {key}: {val}')
+
+                self.write_deployment_to_file(deployment_id, entry)
+
+            except Exception as err:
+                self.print_warning(f'Error inspecting deployments for {deployment_id}')
+                if self.verbose: self.print_warning(str(err))
+        
+        if len(ret) < 1:
+            self.print_failure('No tenant-level deployment parameters found')
+        # for line in reportable:
+        #     self.print_success(line)
 
         return ret
 
@@ -64,28 +102,38 @@ class Module(AzureModule):
 
         ret = []
         headers = {'Authorization': f'Bearer {self.auth_token}'}
-        endpoint = f'https://management.azure.com/subscriptions/{subscription}/providers/Microsoft.Resources/deployments/'
+        endpoint = f'https://management.azure.com/subscriptions/{subscription}/providers/Microsoft.Resources/deployments/?api-version=2025-04-01'
         
         res = self.http_request('GET', endpoint, headers=headers)
         deployments = json.loads(res.text).get('value', [])
 
         # TODO: Logic to parse response for parameters!!
-        verbose = self.get_opt('VERBOSE')
-        reportable = []
+
         for entry in deployments:
-            parameters = entry.get('parameters')
+            try:
+                deployment_id = entry.get('id', 'UNKNOWN')
+                parameters = entry.get('properties', {}).get('parameters', {})
+                
+                if len(parameters.keys()) > 0:
+                    self.print_status(f'Found parameters for {deployment_id}')
 
-            
-            for key in parameters.keys():
-                type = parameters[key].get('type', None)
-                val = parameters[key].get('value', None)
+                for key in parameters.keys():
+                    type = parameters[key].get('type', None)
+                    val = parameters[key].get('value', None)
 
-                if (type == 'String' or verbose) and val != None: reportable.append(f'({type}) {key} {val}')
+                    # if self.verbose and val != None:
+                    
+                    if self.get_opt(Module.OPT_PRINT_PARAMS): self.print_success(f'({type}) {key}: {val}')
+                    ret.append(f'({type}) {key}: {val}')
 
-        if len(reportable) < 1:
-            self.framework.print_failure(f'No subscription-level deployment parameters found')
-        for line in reportable:
-            self.framework.print_success(line)
+                self.write_deployment_to_file(deployment_id, entry)
+
+            except Exception as err:
+                self.print_warning(f'Error inspecting deployments for {deployment_id}')
+                if self.verbose: self.print_warning(str(err))
+
+        if len(ret) < 1:
+            self.print_failure(f'No subscription-level deployment parameters found')
 
         return ret
     
@@ -95,36 +143,45 @@ class Module(AzureModule):
         ret = []
         headers = {'Authorization': f'Bearer {self.auth_token}'}
         group_ids = self.list_resource_groups(subscription)
-        self.framework.print_status(f'Identified {len(group_ids)} resource groups in subscription {subscription}')
+
         # Resource Group Id format is /subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROU_NAME"
-
         if len(group_ids) < 1:
-             self.framework.print_failure(f'No resource-group-level deployment parameters found')
+             self.print_failure(f'No resource-groups found in subscription {subscription}')
+        else:
+            self.print_status(f'Identified {len(group_ids)} resource groups in subscription {subscription}')
 
-        for resource_group in group_ids:
-            endpoint = f'https://management.azure.com{resource_group}/providers/Microsoft.Resources/deployments/?api-version=2025-04-01'
-            res = self.http_request('GET', endpoint, headers=headers)
-            deployments = json.loads(res.text).get('value', [])
-            
-            # TODO: Logic to parse response for parameters!!
-            verbose = self.get_opt('VERBOSE')
-            reportable = []
-            for entry in deployments:
-                parameters = entry.get('parameters')
+            for resource_group in group_ids:
+                try:
+                    endpoint = f'https://management.azure.com{resource_group}/providers/Microsoft.Resources/deployments/?api-version=2025-04-01'
+                    res = self.http_request('GET', endpoint, headers=headers)
+                    deployments = json.loads(res.text).get('value', [])
+                    
+                    # TODO: Logic to parse response for parameters!!
+                    for entry in deployments:
+                        deployment_id = entry.get('id', 'UNKNOWN')
+                        parameters = entry.get('properties', {}).get('parameters', [])
 
-                
-                for key in parameters.keys():
-                    type = parameters[key].get('type', None)
-                    val = parameters[key].get('value', None)
+                        if len(parameters.keys()) > 0:
+                            self.print_status(f'Found parameters for {deployment_id}')
 
-                    if (type == 'String' or verbose) and val != None:
-                        reportable.append(f'({type}) {key} {val}')
+                        for key in parameters.keys():
+                            type = parameters[key].get('type', None)
+                            val = parameters[key].get('value', None)
 
-            if len(reportable) > 0:
-                self.framework.print_status(f'Deployment parameters found for {resource_group}')
-                for line in reportable:
-                    self.framework.print_success(line)
-            else: self.framework.print_failure(f'No resource-group-level deployment parameters found')
+                            # if self.verbose and val != None:
+                            
+                            if self.get_opt(Module.OPT_PRINT_PARAMS): self.print_success(f'({type}) {key}: {val}')
+                            ret.append(f'({type}) {key}: {val}')
+
+                        self.write_deployment_to_file(deployment_id, entry)
+
+                except Exception as err:
+                    self.print_warning(f'Couldn\'t list deployments in {resource_group}')
+                    if self.verbose: self.print_warning(str(err))
+
+
+        if len(ret) < 1:
+            self.print_failure(f'No deployment parameters found at resource group scope')
 
         return ret
     
@@ -135,11 +192,11 @@ class Module(AzureModule):
         self.auth_token = self.get_cred().access_token(scope=AZ_MGMT_TOKEN_SCOPE)
         subscriptions = self.get_opt_az_subscription()
 
-        self.framework.print_status(f'Attempting to retrieve tenant-level deployment parameters...')
+        self.print_status(f'Attempting to retrieve tenant-level deployment parameters...')
         ret = self.inspect_tenant_deployments()
         
         for subscription in subscriptions:
-            self.framework.print_status(f'Searching for deployment parameters in {subscription}')
+            self.print_status(f'Searching for deployment parameters in {subscription}')
             ret = self.inspect_subscription_deployments(subscription)
             ret = self.inspect_resource_group_deployments(subscription)
 

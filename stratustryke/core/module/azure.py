@@ -15,6 +15,9 @@ from pathlib import Path
 import urllib3
 
 
+AZ_MGMT_URL='https://management.azure.com'
+
+
 # Microsft modules to interact with azure subscriptions
 class AzureModule(M365Module):
 

@@ -124,7 +124,7 @@ class Module(AWSModule):
             try:
                 ret.append(self.load_private_key_from_pem(keytext, password))
             except Exception as err:
-                self.framework.print_failure(f'Could not load key text: {keytext.replace('\n', '\\n')}')
+                # self.framework.print_failure(f'Could not load key text: {keytext.replace("\n", "\\n")}')
                 if verbose_output: self.framework.print_failure(str(err))
         return ret
 

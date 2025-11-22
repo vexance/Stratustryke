@@ -286,7 +286,8 @@ class MicrosoftCredential(CloudCredential):
         
         # This might break things but we'll see :|
         elif (scope != self._token_scope) and self._access_token != None:
-            raise StratustrykeException('Attempting to re-scope existing Microsoft Graph access token')
+            # raise StratustrykeException('Cannot re-scope existing Microsoft Graph access token')
+            return self._access_token
         
         TOKEN_SCOPE = scope if (scope != None) else self._token_scope
         

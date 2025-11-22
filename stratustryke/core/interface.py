@@ -525,21 +525,30 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     def do_set(self, args):
         if self.framework.current_module: # get options for current module
             opts = self.framework.current_module._options
+            advanced = self.framework.current_module._advanced
             opt_names = self.framework.current_module._options.keys()
-            opt_names.extend(self.framework.current_module._advanced.keys())
+            advanced_opts = self.framework.current_module._advanced.keys()
         else:
             self.print_line('No module currently in use')
             return
 
         # Make sure the opt is one of the module's options
-        if args.option_name.upper() not in opt_names:
+        opt_upper = args.option_name.upper()
+        if not ((opt_upper in opt_names) or (opt_upper in advanced_opts)):
             self.print_line(f'Unknown option: {args.option_name}')
             return
 
         try:
-            if args.option_value.startswith('file:'):
-                args.option_value = args.option_value[5:] # strip file: prefix when setting
-            success = opts.set_opt(args.option_name, args.option_value)
+            if opt_upper in opt_names:
+                if args.option_value.startswith('file:'):
+                    args.option_value = args.option_value[5:] # strip file: prefix when setting
+                success = opts.set_opt(args.option_name, args.option_value)
+            
+            else: # advanced option
+                if args.option_value.startswith('file:'):
+                    args.option_value = args.option_value[5:] # strip file: prefix when setting
+                success = advanced.set_opt(args.option_name, args.option_value)
+
         except TypeError as err:
             self.print_line(f'Invalid data type for \'{args.option_name}\': {args.option_value}')
             self._logger.error(f'Invalid data type for \'{args.option_name}\': {args.option_value}')
@@ -1004,7 +1013,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
                     self.framework.print_error('User principals must be supplied as full email addresses')
                     return None
                 
-                scope = stratustryke.core.credential.AZ_MGMT_TOKEN_SCOPE if (args.cred_type == 'm365') else stratustryke.core.credential.AZ_MGMT_TOKEN_SCOPE
+                scope = stratustryke.core.credential.M365_GRAPH_TOKEN_SCOPE if (args.cred_type == 'm365') else stratustryke.core.credential.AZ_MGMT_TOKEN_SCOPE
                 cred = stratustryke.core.credential.MicrosoftCredential(args.cred_alias, args.workspace, tenant=tenant, principal=principal, secret=secret, token_scope=scope)
                 
                 try:

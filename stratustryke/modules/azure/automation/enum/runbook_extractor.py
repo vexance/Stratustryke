@@ -6,6 +6,10 @@ from pathlib import Path
 
 
 class Module(AzureModule):
+
+    OPT_DOWNLOAD_DIR = 'DOWNLOAD_DIR'
+    OPT_DOWNLOAD_SRC = 'DOWNLOAD_SRC'
+
     def __init__(self, framework) -> None:
         super().__init__(framework)
         self._info = {
@@ -17,9 +21,8 @@ class Module(AzureModule):
 
         # self._options.add_string('ACCOUNT_PREFIX', 'Prefix for automation accounts to inclde (default: ALL) [S/F/P]')
         # self._options.add_string('RUNBOOK_PREFIX', 'Prefix for runbooks to include (default: ALL) [S/F/P]', False)
-        self._options.add_string('DOWNLOAD_DIR', 'Directory files will be downloaded to', True, module_data_dir(self.name))
-        self._options.add_boolean('VERBOSE', 'When enabled, prints runbook tags, description and parameters', True, True)
-        self._options.add_boolean('DOWNLOAD', 'When enabled, enables source code download as well as config enum', True, True)
+        self._options.add_string(Module.OPT_DOWNLOAD_DIR, 'Directory files will be downloaded to', True, module_data_dir(self.name))
+        self._options.add_boolean(Module.OPT_DOWNLOAD_SRC, 'When enabled, enables source code download as well as config enum', True, True)
         
         self.auth_token = None
 
@@ -119,9 +122,8 @@ class Module(AzureModule):
         self.auth_token = self.get_cred().access_token(scope=AZ_MGMT_TOKEN_SCOPE)
         subscriptions = self.get_opt_az_subscription()        
 
-        verbose = self.get_opt('VERBOSE')
-        download = self.get_opt('DOWNLOAD')
-        download_dir = self.get_opt('DOWNLOAD_DIR')
+        download = self.get_opt(Module.OPT_DOWNLOAD_SRC)
+        download_dir = self.get_opt(Module.OPT_DOWNLOAD_DIR)
         download_path = str(Path(download_dir).resolve().absolute())
         # account_prefixes = self.get_opt_multiline('ACCOUNT_PREFIX')
         # runbook_prefixes = self.get_opt_multiline('RUNBOOK_PREFIX')
@@ -150,7 +152,7 @@ class Module(AzureModule):
                 for runbook_path in runbooks:
 
                     self.framework.print_success(runbook_path)
-                    if verbose: self.get_runbook_metadata(runbook_path)
+                    if self.verbose: self.get_runbook_metadata(runbook_path)
                     if download: 
                         status, content, extension = self.get_runbook_content(runbook_path)
 
