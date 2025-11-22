@@ -4,8 +4,6 @@ from __future__ import unicode_literals
 
 import argparse
 import logging
-import os
-import sys
 
 from stratustryke import __version__
 from stratustryke.core.interface import InteractiveInterpreter
