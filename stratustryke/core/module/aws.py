@@ -4,6 +4,7 @@
 from stratustryke.core.module import StratustrykeModule
 from stratustryke.settings import AWS_DEFAULT_REGION, AWS_DEFAULT_ENABLED_REGIONS
 from stratustryke.core.credential.aws import AWSCredential
+from stratustryke.lib.regex import AWS_ACCESS_KEY_REGEX, AWS_SECRET_KEY_REGEX, AWS_SESSION_TOKEN_REGEX
 
 
 class AWSModule(StratustrykeModule):
@@ -16,9 +17,9 @@ class AWSModule(StratustrykeModule):
 
     def __init__(self, framework) -> None:
         super().__init__(framework)
-        self._options.add_string(AWSModule.OPT_ACCESS_KEY, 'AWS access key id for authentication', True, regex = '(?:A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}')
-        self._options.add_string(AWSModule.OPT_SECRET_KEY, 'AWS secret key to use for authentication', True, regex='[0-9a-zA-Z\\/+]{40}', sensitive=True)
-        self._options.add_string(AWSModule.OPT_SESSION_TOKEN, 'AWS session token for temporary credential authentication', regex='[0-9a-zA-Z\\/+]{364}', sensitive=True)
+        self._options.add_string(AWSModule.OPT_ACCESS_KEY, 'AWS access key id for authentication', True, regex=AWS_ACCESS_KEY_REGEX)
+        self._options.add_string(AWSModule.OPT_SECRET_KEY, 'AWS secret key to use for authentication', True, regex=AWS_SECRET_KEY_REGEX, sensitive=True)
+        self._options.add_string(AWSModule.OPT_SESSION_TOKEN, 'AWS session token for temporary credential authentication', regex=AWS_SESSION_TOKEN_REGEX, sensitive=True)
         self._options.add_string(AWSModule.OPT_AWS_REGION, 'AWS region(s) to specify within calls', False, AWS_DEFAULT_REGION)
         self._cred = None
 

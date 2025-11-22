@@ -25,6 +25,18 @@ class StratustrykeFramework(object):
     Main instance of the framework which handles configurations, loaded modules, passes input between CLI and modules, and handles terminal / file output
     '''
 
+    CONF_MASK_SENSITIVE = 'MASK_SENSITIVE'
+    CONF_COLORED_OUTPUT = 'COLORED_OUTPUT'
+    CONF_FORCE_VALIDATE_OPTIONS = 'FORCE_VALIDATE_OPTIONS'
+    CONF_SPOOL_OVERWRITE = 'SPOOL_OVERWRITE'
+    CONF_TRUNCATE_OPTIONS = 'TRUNCATE_OPTIONS'
+    CONF_FIREPROX_CRED_ALIAS = 'FIREPROX_CRED_ALIAS'
+    CONF_DEFAULT_TABLE_FORMAT = 'DEFAULT_TABLE_FORMAT'
+    CONF_WORKSPACE = 'WORKSPACE'
+    CONF_HTTP_PROXY = 'HTTP_PROXY'
+    CONF_HTTP_VERIFY_SSL = 'HTTP_VERIFY_SSL'
+    CONF_HTTP_STSK_HEADER = 'HTTP_STSK_HEADER'
+
     def __init__(self, stdout = None):
         # Package info
         self.__package__ = '.'.join(self.__module__.split('.')[:-1])
@@ -55,17 +67,17 @@ class StratustrykeFramework(object):
 
         # Framework options
         self._config = Options()
-        self._config.add_boolean('MASK_SENSITIVE', 'Configure masking of sensitive option values in module options display', True, settings.MASK_SENSITIVE_OPTIONS)
-        self._config.add_boolean('COLORED_OUTPUT', 'Enables color in console output', True, settings.COLORED_OUTPUT)
-        self._config.add_boolean('FORCE_VALIDATE_OPTIONS', 'Enables validation checks on module options upon running the module', True, settings.FORCE_VALIDATE_OPTIONS)
-        self._config.add_boolean('SPOOL_OVERWRITE', 'Enables spool file overwrite and disables default writing mode (append) for file spooling ops', True, settings.SPOOL_OVERWRITE)
-        self._config.add_boolean('TRUNCATE_OPTIONS', 'Enables / disables truncation of long option values to avoid line-breaks in terminal', True, settings.TRUNCATE_OPTIONS)
-        self._config.add_string('FIREPROX_CRED_ALIAS', 'Credential alias to use for management of fireprox APIs', True, settings.FIREPROX_CRED_ALIAS)
-        self._config.add_string('DEFAULT_TABLE_FORMAT', 'Default outputing format for table output', True, settings.DEFAULT_TABLE_FORMAT)
-        self._config.add_string('WORKSPACE', 'Workspace to filter credential objects in the stratustryke sqlite credstore', True, settings.DEFAULT_WORKSPACE)
-        self._config.add_string('HTTP_PROXY', 'Proxy (schema://host:port) for modules to use as an HTTP/S proxy for web traffic', False, None, '(http[s]?|socks[45][h]?)[:]\\/\\/.*[:][0-9]{1,5}')
-        self._config.add_boolean('HTTP_VERIFY_SSL', 'Enable or disable SSL/TLS verification when modules perform manual HTTP requests', True, settings.HTTP_VERIFY_SSL)
-        self._config.add_boolean('HTTP_STSK_HEADER', 'Enable / disable submission of X-Stratustryke-Header for custom HTTP requests', True, settings.HTTP_STSK_HEADER)
+        self._config.add_boolean(StratustrykeFramework.CONF_MASK_SENSITIVE, 'Configure masking of sensitive option values in module options display', True, settings.MASK_SENSITIVE_OPTIONS)
+        self._config.add_boolean(StratustrykeFramework.CONF_COLORED_OUTPUT, 'Enables color in console output', True, settings.COLORED_OUTPUT)
+        self._config.add_boolean(StratustrykeFramework.CONF_FORCE_VALIDATE_OPTIONS, 'Enables validation checks on module options upon running the module', True, settings.FORCE_VALIDATE_OPTIONS)
+        self._config.add_boolean(StratustrykeFramework.CONF_SPOOL_OVERWRITE, 'Enables spool file overwrite and disables default writing mode (append) for file spooling ops', True, settings.SPOOL_OVERWRITE)
+        self._config.add_boolean(StratustrykeFramework.CONF_TRUNCATE_OPTIONS, 'Enables / disables truncation of long option values to avoid line-breaks in terminal', True, settings.TRUNCATE_OPTIONS)
+        self._config.add_string(StratustrykeFramework.CONF_FIREPROX_CRED_ALIAS, 'Credential alias to use for management of fireprox APIs', True, settings.FIREPROX_CRED_ALIAS)
+        self._config.add_string(StratustrykeFramework.CONF_DEFAULT_TABLE_FORMAT, 'Default outputing format for table output', True, settings.DEFAULT_TABLE_FORMAT)
+        self._config.add_string(StratustrykeFramework.CONF_WORKSPACE, 'Workspace to filter credential objects in the stratustryke sqlite credstore', True, settings.DEFAULT_WORKSPACE)
+        self._config.add_string(StratustrykeFramework.CONF_HTTP_PROXY, 'Proxy (schema://host:port) for modules to use as an HTTP/S proxy for web traffic', False, None, '(http[s]?|socks[45][h]?)[:]\\/\\/.*[:][0-9]{1,5}')
+        self._config.add_boolean(StratustrykeFramework.CONF_HTTP_VERIFY_SSL, 'Enable or disable SSL/TLS verification when modules perform manual HTTP requests', True, settings.HTTP_VERIFY_SSL)
+        self._config.add_boolean(StratustrykeFramework.CONF_HTTP_STSK_HEADER, 'Enable / disable submission of X-Stratustryke-Header for custom HTTP requests', True, settings.HTTP_STSK_HEADER)
 
         # Load modules into framework - get modules dir and all directories below it
         self.current_module = None
@@ -81,7 +93,7 @@ class StratustrykeFramework(object):
         self.spool_mode = None
         self.credentials = CredentialStoreConnector(self, str(lib.sqlite_filepath()))
         
-        fp_alias = self._config.get_opt('FIREPROX_CRED_ALIAS')._value
+        fp_alias = self._config.get_opt(StratustrykeFramework.CONF_FIREPROX_CRED_ALIAS)._value
         if fp_alias in self.credentials.keys():
             fp_cred = self.credentials[fp_alias]
             self.fireprox = FireProx(fp_cred)
@@ -106,7 +118,7 @@ class StratustrykeFramework(object):
     # === various logging and print utility methods === #
     def print_error(self, msg: str) -> None:
         '''Prints (magenta) error message: [x] {msg}'''
-        use_color = self._config.get_val('COLORED_OUTPUT')
+        use_color = self._config.get_val(StratustrykeFramework.CONF_COLORED_OUTPUT)
         prefix = colored('[x]', 'magenta', attrs=('bold',)) if use_color else '[x]'
         output = f'{prefix} {msg}{os.linesep}'
 
@@ -119,7 +131,7 @@ class StratustrykeFramework(object):
 
     def print_status(self, msg: str) -> None:
         '''Prints (blue) status message: [*] {msg}'''
-        use_color = self._config.get_val('COLORED_OUTPUT')
+        use_color = self._config.get_val(StratustrykeFramework.CONF_COLORED_OUTPUT)
         prefix = colored('[*]', 'blue', attrs=('bold',)) if use_color else '[*]'
         output = f'{prefix} {msg}{os.linesep}'
 
@@ -130,7 +142,7 @@ class StratustrykeFramework(object):
 
     def print_warning(self, msg: str) -> None:
         '''Prints (yellow) warning message: [!] {msg}'''
-        use_color = self._config.get_val('COLORED_OUTPUT')
+        use_color = self._config.get_val(StratustrykeFramework.CONF_COLORED_OUTPUT)
         prefix = colored('[!]', 'yellow', attrs=('bold',)) if use_color else '[!]'
         output = f'{prefix} {msg}{os.linesep}'
 
@@ -142,7 +154,7 @@ class StratustrykeFramework(object):
 
     def print_success(self, msg: str) -> None:
         '''Prints (green) success message: [+] {msg}'''
-        use_color = self._config.get_val('COLORED_OUTPUT')
+        use_color = self._config.get_val(StratustrykeFramework.CONF_COLORED_OUTPUT)
         prefix = colored('[+]', 'green', attrs=('bold',)) if use_color else '[+] '
         output = f'{prefix} {msg}{os.linesep}'
         
@@ -153,7 +165,7 @@ class StratustrykeFramework(object):
 
     def print_failure(self, msg: str) -> None:
         '''Prints (red) failure (not error!) message: [-] {msg}'''
-        use_color = self._config.get_val('COLORED_OUTPUT')
+        use_color = self._config.get_val(StratustrykeFramework.CONF_COLORED_OUTPUT)
         prefix = colored('[-]', 'red', attrs=('bold',)) if use_color else '[-] '
         output = f'{prefix} {msg}{os.linesep}'
         
@@ -269,7 +281,7 @@ class StratustrykeFramework(object):
         :param headers: list[str] containing column header names
         :param prefix: string to include before each line [default two spaces]
         :param table_format: type of table to generate'''
-        table_format = self._config.get_opt('DEFAULT_TABLE_FORMAT') if (table_format == None) else table_format
+        table_format = self._config.get_opt(StratustrykeFramework.CONF_DEFAULT_TABLE_FORMAT) if (table_format == None) else table_format
         table_text = tabulate.tabulate(rows, headers=headers, tablefmt=table_format)
         if prefix:
             table_text = '\n'.join(f'{prefix}{line}' for line in table_text.split('\n'))

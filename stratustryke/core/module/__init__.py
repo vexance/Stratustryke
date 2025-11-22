@@ -62,11 +62,11 @@ class StratustrykeModule(object):
     
     @property
     def web_proxies(self) -> dict:
-        valid, msg = self.framework._config.get_opt('HTTP_PROXY').validate()
+        valid, msg = self.framework._config.get_opt(self.framework.CONF_HTTP_PROXY).validate()
         if not valid:
             raise StratustrykeException(msg)
 
-        proxy = self.framework._config.get_val('HTTP_PROXY')
+        proxy = self.framework._config.get_val(self.framework.CONF_HTTP_PROXY)
         if proxy in ['', None]:
             return {}
         
@@ -162,12 +162,12 @@ class StratustrykeModule(object):
         :param auth: (any) authentication. Support Sigv4
         '''
         proxies = kwargs.get('proxies', self.web_proxies)
-        verify = kwargs.get('verify', self.framework._config.get_val('HTTP_VERIFY_SSL'))
+        verify = kwargs.get('verify', self.framework._config.get_val(self.framework.CONF_HTTP_VERIFY_SSL))
         data = kwargs.get('data', None)
         auth = kwargs.get('auth', None)
         json = kwargs.get('json', None)
         headers = kwargs.get('headers', {})
-        if self.framework._config.get_val('HTTP_STSK_HEADER'):
+        if self.framework._config.get_val(self.framework.CONF_HTTP_STSK_HEADER):
             headers.update({'X-Stratustryke-Module': f'{self.search_name}'})
 
         if method == 'GET': json, data = None, None # Ensure GET requests don't contain request body

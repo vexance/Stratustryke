@@ -151,7 +151,7 @@ class InteractiveInterpreter(Command):
     @property
     def prompt(self):
         '''The CLI prompt'''
-        coloring = self.framework._config.get_val('COLORED_OUTPUT')
+        coloring = self.framework._config.get_val(self.framework.CONF_COLORED_OUTPUT)
         prog_name = colored(stratustryke.__progname__, 'blue', attrs=('bold',)) if (coloring) else stratustryke.__progname__
 
         if self.framework.current_module == None:
@@ -288,7 +288,7 @@ class InteractiveInterpreter(Command):
         if not path.is_absolute():
             path = Path(os.getcwd()/path).absolute()
 
-        coloring = self.framework._config.get_val('COLORED_OUTPUT')
+        coloring = self.framework._config.get_val(self.framework.CONF_COLORED_OUTPUT)
         for entry in path.iterdir():
             item = f'{entry.parts[-1]}'
             if coloring and entry.is_dir():
@@ -439,8 +439,8 @@ class InteractiveInterpreter(Command):
         self.print_line('') # create space
         self.print_line('  Module options:')
         self.print_line('')
-        masking = self.framework._config.get_val('MASK_SENSITIVE')
-        truncating = self.framework._config.get_val('TRUNCATE_OPTIONS')
+        masking = self.framework._config.get_val(self.framework.CONF_MASK_SENSITIVE)
+        truncating = self.framework._config.get_val(self.framework.CONF_TRUNCATE_OPTIONS)
         rows = mod.show_options(masking, truncating)
         headers = ['Module Name', 'Value', 'Required', 'Description']
         self.framework.print_table(rows, headers, '  ')
@@ -693,8 +693,8 @@ class InteractiveInterpreter(Command):
         self.print_line('') # create space
         self.print_line('  Module options:')
         self.print_line('')
-        masking = self.framework._config.get_val('MASK_SENSITIVE')
-        truncating = self.framework._config.get_val('TRUNCATE_OPTIONS')
+        masking = self.framework._config.get_val(self.framework.CONF_MASK_SENSITIVE)
+        truncating = self.framework._config.get_val(self.framework.CONF_TRUNCATE_OPTIONS)
         rows = mod.show_options(masking, truncating)
         headers = ['Module Name', 'Value', 'Required', 'Description']
         self.framework.print_table(rows, headers, '  ')
@@ -726,8 +726,8 @@ class InteractiveInterpreter(Command):
         self.print_line('') # create space
         self.print_line('  Module options:')
         self.print_line('')
-        masking = self.framework._config.get_val('MASK_SENSITIVE')
-        truncating = self.framework._config.get_val('TRUNCATE_OPTIONS')
+        masking = self.framework._config.get_val(self.framework.CONF_MASK_SENSITIVE)
+        truncating = self.framework._config.get_val(self.framework.CONF_TRUNCATE_OPTIONS)
         rows = mod.show_options(masking, truncating)
         headers = ['Module Name', 'Value', 'Required', 'Description']
         self.framework.print_table(rows, headers, '  ')
@@ -740,8 +740,8 @@ class InteractiveInterpreter(Command):
             self.print_line('  Advanced module options:')
             self.print_line('')
 
-            masking = self.framework._config.get_val('MASK_SENSITIVE')
-            truncating = self.framework._config.get_val('TRUNCATE_OPTIONS')
+            masking = self.framework._config.get_val(self.framework.CONF_MASK_SENSITIVE)
+            truncating = self.framework._config.get_val(self.framework.CONF_TRUNCATE_OPTIONS)
             
             headers = ['Module Name', 'Value', 'Required', 'Description']
             self.framework.print_table(rows, headers, '  ')
@@ -782,8 +782,8 @@ class InteractiveInterpreter(Command):
                 self.print_line('No module currently selected')
                 return
             self.print_line(f'  Module options:{os.linesep}')
-            masking = self.framework._config.get_val('MASK_SENSITIVE')
-            truncating = self.framework._config.get_val('TRUNCATE_OPTIONS')
+            masking = self.framework._config.get_val(self.framework.CONF_MASK_SENSITIVE)
+            truncating = self.framework._config.get_val(self.framework.CONF_TRUNCATE_OPTIONS)
             rows = self.framework.current_module.show_options(masking, truncating)
             headers = ['Name', 'Value', 'Required', 'Description']
 
@@ -894,7 +894,7 @@ class InteractiveInterpreter(Command):
     @argument('alias', nargs='?', help = 'Credentials to load for the selected module')
     def do_creds(self, args):
         if args.alias == None:
-            workspace = self.framework._config.get_val('WORKSPACE')
+            workspace = self.framework._config.get_val(self.framework.CONF_WORKSPACE)
             aliases = self.framework.credentials.list_aliases(workspace)
             
             headers = ['Cred Type', 'Alias']
@@ -934,7 +934,7 @@ class InteractiveInterpreter(Command):
         return
         
     def complete_creds(self, text, line, begidx, endidx):
-        workspace = self.framework._config.get_val('WORKSPACE')
+        workspace = self.framework._config.get_val(self.framework.CONF_WORKSPACE)
         return [i for i in self.framework.credentials.list_aliases(workspace) if i.startswith(text)]
 
 
@@ -953,7 +953,7 @@ class InteractiveInterpreter(Command):
         self.framework.credentials.remove_credential(args.alias)
 
     def complete_rmcred(self, text, line, begidx, endidx):
-        workspace = self.framework._config.get_val('WORKSPACE')
+        workspace = self.framework._config.get_val(self.framework.CONF_WORKSPACE)
         return [i for i in self.framework.credentials.list_aliases(workspace) if i.startswith(text)]
 
 
@@ -1069,7 +1069,7 @@ class InteractiveInterpreter(Command):
             return
 
         else: # we'll try and create the file handle
-            spool_overwrite = self.framework._config.get_val('SPOOL_OVERWRITE')
+            spool_overwrite = self.framework._config.get_val(self.framework.CONF_SPOOL_OVERWRITE)
             mode = 'w' if (spool_overwrite) else 'a'
             path = Path(args.path)
 
@@ -1111,7 +1111,7 @@ class InteractiveInterpreter(Command):
         if self.framework.current_module == None:
             self.print_line('No module currently selected')
 
-        force_validate = self.framework._config.get_val('FORCE_VALIDATE_OPTIONS')
+        force_validate = self.framework._config.get_val(self.framework.CONF_FORCE_VALIDATE_OPTIONS)
         if force_validate:
             self.print_status('Validating module options')
             valid, msg = self.framework.current_module.validate_options()

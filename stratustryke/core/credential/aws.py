@@ -7,6 +7,7 @@ from re import match as regex_match
 from stratustryke.core.credential import CloudCredential
 from stratustryke.settings import AWS_DEFAULT_REGION, DEFAULT_WORKSPACE
 from stratustryke.lib import StratustrykeException
+from stratustryke.lib.regex import AWS_ROLE_ARN_REGEX
 
 
 class AWSCredential(CloudCredential):
