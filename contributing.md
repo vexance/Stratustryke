@@ -50,12 +50,25 @@ The example steps below show at a high level how to write your own Stratustryke 
 
 ```python
 from stratustryke.core.module.aws import AWSModule
+from stratustryke.lib.regex import AWS_ROLE_ARN_REGEX
 ```
 
 2. **Start Module Class Definition.** All modules must be implemented by the `Module` class. In this case, we are writing an AWS focused module, so our class will inherit from `AWSModule`. Within the class constructor (`__init__()`) we will first call the parent class's constructer, then specify the required module informational details.
 
 ```python
 class Module(AWSModule): # Our class, Module, inherits from AWSModule
+
+    # Recommended practice to set option names here for easy updates in the future
+    OPT_ALIAS = 'ALIAS'
+    OPT_WORKSPACE = 'WORKSPACE'
+    OPT_ROLE_ARN = 'ROLE_ARN'
+    OPT_EXTERNAL_ID = 'EXTERNAL_ID'
+    OPT_DURATION = 'DURATION'
+    OPT_SESSION_NAME = 'SESSION_NAME'
+
+    ### Modules inheriting from AWSModule will also get the following default options
+    # OPT_AUTH_ACCESS_KEY, OPT_AUTH_SECRET_KEY, OPT_AUTH_SESSION_TOKEN, OPT_AWS_REGION
+
     def __init__(self, framework) -> None:
         super().__init__(framework) # Call AWSModule.__init__() (which in turn will also call StratustrykeModule.__init__())
         self._info = { # Write our module info
@@ -80,17 +93,17 @@ class Module(AWSModule): # Our class, Module, inherits from AWSModule
 
         # add_OPTION() paramters require an option name, description, indicator whether it is required (True or False), optional regular expression to check, and optional flag for whether the value is sensitive (True or False)
         # Required option for the alias name
-        self._options.add_string('ALIAS', 'Name of alias to import the credential as', True) #
-        # Required option with a default value (self.framework._config.get_val('OPTION_NAME'))
-        self._options.add_string('WORKSPACE', 'Workspace to import the credential to', True, self.framework._config.get_val('WORKSPACE')), 
+        self._options.add_string(Module.OPT_ALIAS, 'Name of alias to import the credential as', True) #
+        # Required option with a default value (self.framework._config.get_val(self.frameowrk.CONF_OPT_NAME))
+        self._options.add_string(Module.OPT_WORKSPACE, 'Workspace to import the credential to', True, self.framework._config.get_val(self.framework.CONF_WORKSPACE)), 
         # Required option with a regex validation pattern
-        self._options.add_string('ROLE_ARN', 'Target ARN of role to assume', True, regex='^arn:aws:iam::[0-9]{12}:role/.*$') 
+        self._options.add_string(Module.OPT_ROLE_ARN, 'Target ARN of role to assume', True, regex=AWS_ROLE_ARN_REGEX)
         # Optional option (note 'False' in the third argument) than is flagged as sensitive
-        self._options.add_string('EXTERNAL_ID', 'External Id, if necessary, to use in the call', False, sensitive=True) 
+        self._options.add_string(Module.OPT_EXTERNAL_ID, 'External Id, if necessary, to use in the call', False, sensitive=True) 
         # Required option of type integer with a default value of 60
-        self._options.add_integer('DURATION', 'Time (in minutes [15 - ]) for credentials to be valid for', True, 60)
+        self._options.add_integer(Module.OPT_DURATION, 'Time (in minutes [15 - ]) for credentials to be valid for', True, 60)
         # Required option with a default value of 'stratustryke'
-        self._options.add_string('SESSION_NAME', 'Name to designate for the assumed role session', True, 'stratustryke')
+        self._options.add_string(Module.OPT_SESSION_NAME, 'Name to designate for the assumed role session', True, 'stratustryke')
 ```
 
 4. **Define Search Name.** Add the `search_name` property to the class which specifies its search name (used for `show modules` and `use` commands). Most of the time, this should match where the module file is stored in the filesystem. In this case, the module is under `aws/util/`.
@@ -111,13 +124,15 @@ class Module(AWSModule): # Our class, Module, inherits from AWSModule
         cred = self.get_cred()
 
         # Other module-specific options (i.e., the ones we specify in __init__()) can be accessed with self.get_opt('OPTION_NAME')
-        alias = self.get_opt('ALIAS')
-        workspace = self.get_opt('WORKSPACE')
-        arn = self.get_opt('ROLE_ARN')
-        ext_id = self.get_opt('EXTERNAL_ID')
-        duration = self.get_opt('DURATION')
-        session_name = self.get_opt('SESSION_NAME')
-        region = self.get_opt('AWS_REGION')
+        alias = self.get_opt(Module.OPT_ALIAS)
+        workspace = self.get_opt(Module.OPT_WORKSPACE)
+        arn = self.get_opt(Module.OPT_ROLE_ARN)
+        ext_id = self.get_opt(Module.OPT_EXTERNAL_ID)
+        duration = self.get_opt(Module.OPT_DURATION)
+        session_name = self.get_opt(Module.OPT_SESSION_NAME)
+
+        # OPT_AWS_REGION ('AWS_REGION') is an option inherited from the AWSModule class 
+        region = self.get_opt(Module.OPT_AWS_REGION)
 ...
 ```
 
@@ -160,8 +175,8 @@ This section provides an example on recommended ways to access string options th
 class Module(StratustrykeModule):
 ...
     def run(self):
-        value = self.get_opt('OPTION_NAME')
-        is_pasted = self._options.get_opt('OPTION_NAME')._pasted
+        value = self.get_opt(Module.OPT_OPTION_NAME)
+        is_pasted = self._options.get_opt(Module.OPT_OPTION_NAME)._pasted
         if is_pasted: # paste command was used
             lines = self.load_strings(value, is_paste=True)
         elif Path.exists(Path(value)): # we recognize a filepath
@@ -186,7 +201,7 @@ This section shows how the built-in `Module.http_request()` and `Module.http_rec
 class Module(StratustrykeModule):
 ...
     def run(self):
-        outfile = self.get_opt('OUTPUT_FILE')
+        outfile = self.get_opt(Module.OPT_OUTPUT_FILE)
 
         # http_request() passes HTTP_PROXY and HTTP_VERIFY_SSL to requests.request()
         response = self.http_request('GET', 'https://ifconfig.io')
