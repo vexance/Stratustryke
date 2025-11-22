@@ -138,8 +138,8 @@ Now that we have fetched all the specfied options, we can perform module-specifi
             return True
 
         except Exception as err:
-            # Always use self.framework.print_TYPE() for output to the terminal!
-            self.framework.print_failure(f'{err}')
+            # Always use self.print_TYPE() for output to the terminal!
+            self.print_failure(f'{err}')
             return False
 ```
 
