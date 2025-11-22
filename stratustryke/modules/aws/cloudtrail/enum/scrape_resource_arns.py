@@ -1,12 +1,15 @@
-from stratustryke.core.module.aws import AWSModule
-from stratustryke.core.lib import StratustrykeException
+
 from datetime import datetime, timedelta
 from re import findall
+
+from stratustryke.core.module.aws import AWSModule
+
 
 class Module(AWSModule):
 
     OPT_TIMEDELTA = 'TIMEDELTA_DAYS'
     OPT_SKIP_NONREAD = 'SKIP_NONREAD'
+    ARN_SEARCH_REGEX = '(\"|\\s)(arn:aws:[a-z0-9]+:[a-z0-9\\-]*:(|[0-9]{12}):[^\\s\"]+)(\"|\\s)'
 
     def __init__(self, framework) -> None:
         super().__init__(framework)
@@ -20,9 +23,6 @@ class Module(AWSModule):
 
         self._options.add_integer(Module.OPT_TIMEDELTA, 'Time period in days of events to include (1-90)', True, 14)
         self._options.add_boolean(Module.OPT_SKIP_NONREAD, 'When enabled, skips inspection of non-readonly events', True, False)
-
-        self._arn_search_regex = "(\"|\\s)(arn:aws:[a-z0-9]+:[a-z0-9\\-]*:(|[0-9]{12}):[^\\s\"]+)(\"|\\s)"
-
 
 
     @property
@@ -60,19 +60,19 @@ class Module(AWSModule):
             paginator = client.get_paginator('lookup_events')
 
             pages = paginator.paginate(LookupAttributes=attributes, StartTime=query_start, EndTime=query_end)
-            self.framework.print_status(f'Iterating through event pages...')
+            self.print_status(f'Iterating through event pages...')
 
             for page in pages:
                 events = str([e.get('CloudTrailEvent', {}) for e in page.get('Events', [])])
-                matches = findall(self._arn_search_regex, events)
+                matches = findall(Module.ARN_SEARCH_REGEX, events)
                 for match in matches:
                     arns.append(match[1])
                     
         except Exception as err:
-            self.framework.print_error(f'Error during cloudtrail:LookupEvents call: {err}')
+            self.print_error(f'Error during cloudtrail:LookupEvents call: {err}')
             return []
         
-        self.framework.print_status('Post-processing for uniqueness...')
+        self.print_status('Post-processing for uniqueness...')
 
         return arns
 
@@ -80,17 +80,17 @@ class Module(AWSModule):
     def run(self):
 
         
-        self.framework.print_status('Starting query for ReadOnly CloudTrail Insights events')
+        self.print_status('Starting query for ReadOnly CloudTrail Insights events')
         all_records = self.fetch_records(True)
 
         if not self.get_opt(Module.OPT_SKIP_NONREAD):
-            self.framework.print_status('Starting query for non-ReadOnly CloudTrail Insights events')
+            self.print_status('Starting query for non-ReadOnly CloudTrail Insights events')
             all_records.extend(self.fetch_records(False))
 
-        self.framework.print_status('Post-processing for ARN uniqueness, this may take some time...')
+        self.print_status('Post-processing for ARN uniqueness, this may take some time...')
         all_records = list(set(all_records))
 
         for arn in all_records:
-            self.framework.print_success(arn)
+            self.print_success(arn)
 
         return None

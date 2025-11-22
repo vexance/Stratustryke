@@ -11,7 +11,7 @@ class Module(AWSModule):
         super().__init__(framework)
         self._info = {
             'Authors': ['@vexance'],
-            'Details': 'Performs an SNS:Publish API call to an arbitrary SNS topic within a valid AWS account using the supplid credentials. The error message returned from a failed call will include the ARN of the callee (entity associated with the supplied credentials).',
+            'Details': 'Performs an sns:Publish API call to an arbitrary SNS topic within a valid AWS account using the supplid credentials. The error message returned from a failed call will include the ARN of the callee (entity associated with the supplied credentials).',
             'Description': 'Retrieve ARN for the calling principal w/o logging to CloudTrail',
             'References': ['https://hackingthe.cloud/aws/enumeration/whoami/']
         }
@@ -38,25 +38,25 @@ class Module(AWSModule):
             session = cred.session()
             client = session.client('sns')
 
-            self.framework.print_status('Attempting SNS:Publish call...')
+            self.print_status('Attempting sns:Publish call...')
             res = client.publish(TopicArn=topic_arn, Message='sns-message-stratustryke')
             
-            self.framework.print_failure('SNS:Publish successful - unable to identify principle')
+            self.print_failure('sns:Publish successful - unable to identify principle')
             success = False
         except Exception as err:
             # We actually want this to throw a AuthorizationErrorException
             msg = f'{err}'
             if msg.startswith('An error occurred (AuthorizationError) when calling the Publish operation:'):
-                self.framework.print_status('Received expected AuthorizationErrorException')
+                self.print_status('Received expected AuthorizationErrorException')
                 split = msg.split(' ') # split on whitespace - principle type & ARN should be indexes 9 & 10
                 if len(split) > 10:
-                    self.framework.print_success(f'Found principle - {split[9]} {split[10]}')
+                    self.print_success(f'Found principle - {split[9]} {split[10]}')
                     return True
                 else:
-                    self.framework.print_failure('Something went wrong; unexpected response length...')
+                    self.print_failure('Something went wrong; unexpected response length...')
             else:
-                self.framework.print_failure('Unable to identify principle via SNS:Publish')
-                self.framework.print_error(f'{err}')
+                self.print_failure('Unable to identify principle via SNS:Publish')
+                self.print_error(f'{err}')
             success = False
 
         return success

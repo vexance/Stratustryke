@@ -59,7 +59,7 @@
 
 #         ctr = 1
 #         for domain in domains:
-#             self.framework.print_status(f'Performing search for {domain}')
+#             self.print_status(f'Performing search for {domain}')
 #             queries = [f'{search}+site%3A{domain}' for search in search_terms]
 
 #             print(queries)
@@ -71,19 +71,19 @@
 #                 #     response = self.http_request('GET', f'')
 #                 #     results = search(query, num=50, stop=max_results, pause=delay, user_agent=self.random_agent())
 #                 #     for result in results:
-#                 #         self.framework.print_success(f'{result}')
+#                 #         self.print_success(f'{result}')
                     
 #                 #     sleep(delay)
 #                 # except Exception as err:
-#                 #     self.framework.print_warning(f'{err}')
+#                 #     self.print_warning(f'{err}')
 #                 #     if 'HTTP Error 429' in f'{err}':
 #                 #         ctr += 1
 
 #                 #         if ctr > threshold:
-#                 #             self.framework.print_failure('Throttled 3 or more times, quitting!')
+#                 #             self.print_failure('Throttled 3 or more times, quitting!')
 #                 #             return False
                         
-#                 #         self.framework.print_status(f'({ctr}/{threshold}) Throttled - sleeping {delay}x10 ({delay*10}) seconds...')
+#                 #         self.print_status(f'({ctr}/{threshold}) Throttled - sleeping {delay}x10 ({delay*10}) seconds...')
 #                 #         sleep(delay*10)
 #                 #     else:
 #                 #         self.framework._logger.error(f'{err}')

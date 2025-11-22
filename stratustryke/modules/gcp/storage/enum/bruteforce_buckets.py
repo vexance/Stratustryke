@@ -94,17 +94,17 @@ class Module(StratustrykeModule):
         if (keywords == None or mutations == None): # error reading from the files; already printed error
             return False
         
-        self.framework.print_status('Creating mutated wordlist...')
+        self.print_status('Creating mutated wordlist...')
         wordlist = self.permutate(keywords, mutations)
         threads = self.get_opt('THREADS')
 
         total = len(wordlist)
         percentiles = [int(total* (i * 0.1)) for i in range (1, 11)]
-        self.framework.print_status(f'Prepared {total} total mutations; beginning enumeration...')
+        self.print_status(f'Prepared {total} total mutations; beginning enumeration...')
         
         for i in range(0,len(wordlist)):
             if i in percentiles:
-                self.framework.print_status(f'Completed [{i}/{total}] total requests')
+                self.print_status(f'Completed [{i}/{total}] total requests')
             url = f'https://www.googleapis.com/storage/v1/b/{wordlist[i]}'
 
             res = requests.head(url)
@@ -114,6 +114,6 @@ class Module(StratustrykeModule):
                 privs = permissions.get('permissions', None)
                 access = '' if (privs == None) else f'[{", ".join(privs)}]'
 
-                self.framework.print_success(f'Identified: {wordlist[i]} {access}')
+                self.print_success(f'Identified: {wordlist[i]} {access}')
         
         return True

@@ -1,12 +1,19 @@
-from stratustryke.core.module.aws import AWSModule
-from stratustryke.core.lib import StratustrykeException, module_data_dir
-import stratustryke.core.command
+
 import logging
-from termcolor import colored
-from pathlib import Path
 import datetime
 import requests
 import os
+
+from termcolor import colored
+from pathlib import Path
+
+from stratustryke.core.command import Command, command, argument
+from stratustryke.core.module.aws import AWSModule
+from stratustryke.settings import on_linux, on_windows
+from stratustryke.lib import StratustrykeException, module_data_dir
+
+
+
 
 
 class S3Object(object):
@@ -136,7 +143,7 @@ def bucket_exists(framework, name: str) -> bool:
         return False
 
 
-class S3ClientExplorer(stratustryke.core.command.Command):
+class S3ClientExplorer(Command):
     def __init__(self, credential, stdin=None, stdout=None, framework=None, log_handler=None, bucket=None, download_dir=None, use_cache=False, **kwargs):
         super().__init__(stdin, stdout, **kwargs)
         self.cred = credential
@@ -227,8 +234,8 @@ class S3ClientExplorer(stratustryke.core.command.Command):
     # Syntax: 'cache', 'cache enable', 'cache disable'
     # Text Completion: enable, disable
 
-    @stratustryke.core.command.command('Show, enable, or disable current setting for use of discovered object cache')
-    @stratustryke.core.command.argument('value', nargs='?', choices=('enable', 'disable'), help = 'Enable or disable use of discovered object cache')
+    @command('Show, enable, or disable current setting for use of discovered object cache')
+    @argument('value', nargs='?', choices=('enable', 'disable'), help = 'Enable or disable use of discovered object cache')
     def do_cache(self, args):
         if args.value == None:
             use_cached, avoid = 'enabled', '' if self.use_cache else 'disabled', 'not '
@@ -250,11 +257,11 @@ class S3ClientExplorer(stratustryke.core.command.Command):
     # Syntax: 'clear'
     # Aliases: 'cls'
 
-    @stratustryke.core.command.command('Clear terminal screen')
+    @command('Clear terminal screen')
     def do_clear(self, args):
-        if stratustryke.settings.on_linux:
+        if on_linux:
             os.system('clear')
-        elif stratustryke.settings.on_windows:
+        elif on_windows:
             os.system('cls')
         else:
             self.print_line('Unknown system OS is not Linux or Windows')
@@ -267,7 +274,7 @@ class S3ClientExplorer(stratustryke.core.command.Command):
     # Action: Performs s3:ListBuckets call to view buckets listable by the credentialed user
     # Syntax: 'buckets'
 
-    @stratustryke.core.command.command('List s3 buckets visible to the user with s3:ListBuckets')
+    @command('List s3 buckets visible to the user with s3:ListBuckets')
     def do_buckets(self, args):
         # If forcing re-calling APIs or if there is nothing discovered
         if self.use_cache == False or self.discovered == {}:
@@ -305,8 +312,8 @@ class S3ClientExplorer(stratustryke.core.command.Command):
     # Syntax: 'use <bucket>'
     # Text Completion: discovered buckets
     
-    @stratustryke.core.command.command('Select an s3 bucket as the current bucket')
-    @stratustryke.core.command.argument('bucket', help = 'Bucket to explore')
+    @command('Select an s3 bucket as the current bucket')
+    @argument('bucket', help = 'Bucket to explore')
     def do_use(self, args):
         if args.bucket not in self.discovered.keys():
             exists = bucket_exists(self.framework, args.bucket)
@@ -324,7 +331,7 @@ class S3ClientExplorer(stratustryke.core.command.Command):
     # Action: deselects the current bucket and resets prefix
     # Syntax: 'back'
 
-    @stratustryke.core.command.command('Deselect the current bucket')
+    @command('Deselect the current bucket')
     def do_back(self, args):
         self.current_bucket = None
         self.current_prefix = ''
@@ -335,8 +342,8 @@ class S3ClientExplorer(stratustryke.core.command.Command):
     # Syntax: 'ls', 'ls <path>'
     # Text Completion: discovered objects ending with '/'
 
-    @stratustryke.core.command.command('List bucket objects with the current directory key prefix wtih s3:ListObjects')
-    @stratustryke.core.command.argument('path', nargs='?', help = 'Path to directory key prefix to list contents of [\'.\' if not specified]')
+    @command('List bucket objects with the current directory key prefix wtih s3:ListObjects')
+    @argument('path', nargs='?', help = 'Path to directory key prefix to list contents of [\'.\' if not specified]')
     def do_ls(self, args):
         if self.current_bucket == None:
             self.framework.print_line('No bucket selected')
@@ -410,8 +417,8 @@ class S3ClientExplorer(stratustryke.core.command.Command):
     # Syntax: 'cd', 'cd <path>'
     # Text Completion: Discovered s3 objects ending with '/'
 
-    @stratustryke.core.command.command('Change the current directory key prefix')
-    @stratustryke.core.command.argument('path', nargs='?', help = 'Path to new directory. If unspecified, returns to bucket root')
+    @command('Change the current directory key prefix')
+    @argument('path', nargs='?', help = 'Path to new directory. If unspecified, returns to bucket root')
     def do_cd(self, args):
         if self.current_bucket == None:
             self.framework.print_line('No bucket selected')
@@ -442,8 +449,8 @@ class S3ClientExplorer(stratustryke.core.command.Command):
     # Syntax: 'get <path>'
     # Text Completion: files within the current directory
 
-    @stratustryke.core.command.command('Attempt to retrieve object with s3:GetObject')
-    @stratustryke.core.command.argument('path', help = 'Path to object from the current directory')
+    @command('Attempt to retrieve object with s3:GetObject')
+    @argument('path', help = 'Path to object from the current directory')
     def do_get(self, args):
         if self.current_bucket == None:
             self.framework.print_line('No bucket selected')

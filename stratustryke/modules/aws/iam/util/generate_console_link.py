@@ -1,10 +1,12 @@
 
+import json
+
+from urllib.parse import quote_plus
+
 from stratustryke.core.module.aws import AWSModule
 from stratustryke.core.credential.aws import AWSCredential
-from stratustryke.core.lib import StratustrykeException
-import requests
-import json
-from urllib.parse import quote_plus
+from stratustryke.lib import StratustrykeException
+
 
 class Module(AWSModule):
 
@@ -54,13 +56,13 @@ class Module(AWSModule):
 
         if auth_key.startswith('AKIA'): # long-term creds; use sts:GetFederationToken for temp credentials
             if duration > 2160 or duration < 15:
-                self.framework.print_failure('sts:GetFederationToken requires duration to be within 15 - 2160 minutes (36 hours)')
+                self.print_failure('sts:GetFederationToken requires duration to be within 15 - 2160 minutes (36 hours)')
                 return
             
             session_name = self.get_opt(Module.OPT_SESSION_NAME)
 
             try:
-                self.framework.print_status('Performing sts:GetFederationToken request for temporary credentials')
+                self.print_status('Performing sts:GetFederationToken request for temporary credentials')
                 client = session.client('sts')
                 res = client.get_federation_token(Name=session_name, Policy=policy, DurationSeconds=duration)
 
@@ -74,16 +76,16 @@ class Module(AWSModule):
                 fed_token = creds.get('SessionToken', False)
 
                 if all([fed_key, fed_secret, fed_token]):
-                    self.framework.print_status(f'Retrieved federation token for: {fed_arn}')
+                    self.print_status(f'Retrieved federation token for: {fed_arn}')
                     workspace = self.framework._config.get_val('WORKSPACE')
                     federated_credential = AWSCredential(self.name, workspace, default_region=cred._default_region, access_key=fed_key, secret_key=fed_secret, session_token=fed_token)
 
             except Exception as err:
-                self.framework.print_failure('Unable to retrieve temporary credentials with sts:GetFederationToken')
+                self.print_failure('Unable to retrieve temporary credentials with sts:GetFederationToken')
                 self.framework._logger.error('Unable to retrieve temporary credentials with sts:GetFederationToken')
                 return
         else:
-            self.framework.print_status('Temporary credentials detected, skipping sts:GetFederationToken request')
+            self.print_status('Temporary credentials detected, skipping sts:GetFederationToken request')
 
         # Build JSON session string with creds
         if federated_credential:
@@ -97,7 +99,7 @@ class Module(AWSModule):
             url_token = self.get_opt('AUTH_SESSION_TOKEN')
 
         if not all([url_key, url_secret, url_token]):
-            self.framework.print_failure('Unable to build JSON session string with supplied credentials')
+            self.print_failure('Unable to build JSON session string with supplied credentials')
             return
         
         session_string = str({
@@ -112,19 +114,19 @@ class Module(AWSModule):
         else:
             federation_endpoint = f'https://signin.aws.amazon.com/federation?Action=getSigninToken&SessionDuration={duration}&Session={query_string}'
 
-        self.framework.print_status('Requesting signin token from federation endpoint')
+        self.print_status('Requesting signin token from federation endpoint')
         try:
-            federation_response = requests.get(federation_endpoint)
+            federation_response = self.http_request('GET', federation_endpoint)
             federation_token = json.loads(federation_response.text).get('SigninToken', None)
             
             if federation_token == None:
                 raise StratustrykeException('Signin token not received from request to federation endpoint')
 
-            self.framework.print_status('Received token from signin.aws.amazon.com/federation')
-            self.framework.print_success(f'https://signin.aws.amazon.com/federation?Action=login&Issuer=stratustryke&Destination=https%3A%2F%2Fconsole.aws.amazon.com%2F&SigninToken={federation_token}')
+            self.print_status('Received token from signin.aws.amazon.com/federation')
+            self.print_success(f'https://signin.aws.amazon.com/federation?Action=login&Issuer=stratustryke&Destination=https%3A%2F%2Fconsole.aws.amazon.com%2F&SigninToken={federation_token}')
 
         except Exception as err:
-            self.framework.print_failure(f'{err}')
+            self.print_failure(f'{err}')
             self.framework._logger.error(f'{err}')
             return
 

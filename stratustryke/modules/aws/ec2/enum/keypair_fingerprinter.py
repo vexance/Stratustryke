@@ -1,21 +1,13 @@
 
 import base64
 import hashlib
-import sys
-import json
 
 from pathlib import Path
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.serialization import (
-    Encoding,
-    PrivateFormat,
-    PublicFormat,
-    NoEncryption,
-)
+from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, PublicFormat, NoEncryption
 from cryptography.hazmat.primitives.asymmetric import rsa, ed25519
 
 from stratustryke.core.module.aws import AWSModule
-from stratustryke.core.lib import StratustrykeException
 
 
 class Module(AWSModule):
@@ -101,7 +93,7 @@ class Module(AWSModule):
 
             # Either path doesn't exist or was invalid input
             if not provided_path.exists():
-                self.framework.print_error(f'{Module.OPT_PRIVATE_KEY} path does not exist or is invalid : {provided_path[0]}')
+                self.print_error(f'{Module.OPT_PRIVATE_KEY} path does not exist or is invalid : {provided_path[0]}')
                 return []
             
 
@@ -114,8 +106,8 @@ class Module(AWSModule):
                     with open(keyfile, 'r') as f: keytext = f.read()
                     ret.append(self.load_private_key_from_pem(keytext, password))
                 except Exception as err:
-                    self.framework.print_failure(f'Could not load key file {keyfile}')
-                    if verbose_output: self.framework.print_failure(str(err))
+                    self.print_failure(f'Could not load key file {keyfile}')
+                    if verbose_output: self.print_failure(str(err))
 
 
         else: # A pasted key
@@ -124,8 +116,8 @@ class Module(AWSModule):
             try:
                 ret.append(self.load_private_key_from_pem(keytext, password))
             except Exception as err:
-                # self.framework.print_failure(f'Could not load key text: {keytext.replace("\n", "\\n")}')
-                if verbose_output: self.framework.print_failure(str(err))
+                # self.print_failure(f'Could not load key text: {keytext.replace("\n", "\\n")}')
+                if verbose_output: self.print_failure(str(err))
         return ret
 
 

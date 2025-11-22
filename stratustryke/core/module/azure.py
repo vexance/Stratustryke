@@ -30,10 +30,10 @@ class AzureModule(MicrosoftModule):
         if subscriptions == [] or subscriptions == None:
             subscriptions = [] # make sure it is a list if it is in fact NoneType
             for tenant, sub in self.list_subscriptions():
-                self.framework.print_status(f'Found subscription {sub}')
+                self.print_status(f'Found subscription {sub}')
                 subscriptions.append(sub)
         
-        if len(subscriptions) < 1: self.framework.print_warning('No subscriptions found')
+        if len(subscriptions) < 1: self.print_warning('No subscriptions found')
         return subscriptions
     
 
@@ -150,7 +150,7 @@ class AzureModule(MicrosoftModule):
         body, status = self.az_rest_get('/subscriptions', '2022-12-01')
 
         if status != 200:
-            self.framework.print_failure(f'Failed to list subscriptions')
+            self.print_failure(f'Failed to list subscriptions')
             if self.verbose:
                 self.print_failure(f'[Status {status}] {body}')
             return []

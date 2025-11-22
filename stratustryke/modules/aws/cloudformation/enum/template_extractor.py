@@ -1,8 +1,12 @@
-from stratustryke.core.module.aws import AWSModule
-from pathlib import Path
-from stratustryke.core.lib import module_data_dir
-from collections import OrderedDict
+
 import json
+
+from pathlib import Path
+from collections import OrderedDict
+
+from stratustryke.core.module.aws import AWSModule
+from stratustryke.lib import module_data_dir
+
 
 class Module(AWSModule):
 
@@ -38,8 +42,8 @@ class Module(AWSModule):
 
 
         except Exception as err:
-            self.framework.print_failure('Failure performing cloudformation:ListStacks call')
-            self.framework.print_error(f'{err}')
+            self.print_failure('Failure performing cloudformation:ListStacks call')
+            self.print_error(f'{err}')
             return []
         
         for page in pages:
@@ -70,7 +74,7 @@ class Module(AWSModule):
         
         except Exception as err:
             self.frame.print_failure(f'Could not call cloudformation:DescribeStacks for stack \'{stack_name}\'')
-            self.framework.print_error(f'{err}')
+            self.print_error(f'{err}')
             return None
 
 
@@ -81,11 +85,11 @@ class Module(AWSModule):
                 stack_id = stack.get('StackId', None)
                 name = stack.get('StackName', None)
 
-                self.framework.print_success(f'Found {stack_id}')
+                self.print_success(f'Found {stack_id}')
 
                 description = stack.get('Description', None)
                 if VERBOSE and (not (description == None or description == '')):
-                    self.framework.print_status(f'({name}) Description: {description}')
+                    self.print_status(f'({name}) Description: {description}')
 
                 # Inspect Stack Parameters
                 parameters = stack.get('Parameters', [])
@@ -100,7 +104,7 @@ class Module(AWSModule):
                     formatted_params[key] = value
 
                 if VERBOSE and (len(formatted_params.keys()) > 0):
-                    self.framework.print_status(f'({name}) Stack Parameters: {formatted_params}')
+                    self.print_status(f'({name}) Stack Parameters: {formatted_params}')
 
                 # Inspect stack Tags
                 tags = stack.get('Tags', [])
@@ -112,7 +116,7 @@ class Module(AWSModule):
                     formatted_tags[key] = val
 
                 if VERBOSE and (len(formatted_tags.keys()) > 0):
-                    self.framework.print_status(f'({name}) Stack Tags: {formatted_tags}')
+                    self.print_status(f'({name}) Stack Tags: {formatted_tags}')
 
                 ret[name] = stack_id
 
@@ -130,8 +134,8 @@ class Module(AWSModule):
             content = res.get('TemplateBody')
         
         except Exception as err:
-            self.framework.print_failure(f'Error retriving stack template for {stack_id}')
-            self.framework.print_error(f'{err}')
+            self.print_failure(f'Error retriving stack template for {stack_id}')
+            self.print_error(f'{err}')
 
         
         
@@ -147,11 +151,11 @@ class Module(AWSModule):
             with open(f'{download_path}/{stack_name}.{ext}', 'w') as file:
                 file.write(content)
 
-            self.framework.print_success(f'Wrote template to {download_dir}/{stack_name}.{ext}')
+            self.print_success(f'Wrote template to {download_dir}/{stack_name}.{ext}')
             return True
         
         except Exception as err:
-            self.framework.print_error(f'Couldn\'t write stack template for {stack_name}: {err}')
+            self.print_error(f'Couldn\'t write stack template for {stack_name}: {err}')
             return False
 
 
@@ -161,9 +165,9 @@ class Module(AWSModule):
         stacks = self.describe_stacks(None)
 
         # First get all the metadata with regards to the stacks while collecting stack ARNs/Ids
-        if stacks == {}: self.framework.print_status('No cloudformation stacks found')
+        if stacks == {}: self.print_status('No cloudformation stacks found')
         elif stacks == None:
-            self.framework.print_status('cloudformation:DescribeStacks failed, attempting to perform cloudformation:ListStacks call')
+            self.print_status('cloudformation:DescribeStacks failed, attempting to perform cloudformation:ListStacks call')
             stack_names = self.list_stacks()
 
             for stack in stack_names:

@@ -1,10 +1,14 @@
 
-from stratustryke.core.module.aws import AWSModule
-from stratustryke.core.lib import StratustrykeException
+import threading
+
 from datetime import datetime, timedelta
 from pathlib import Path
 from time import sleep
-import threading
+
+from stratustryke.core.module.aws import AWSModule
+from stratustryke.lib import StratustrykeException
+
+
 
 
 class Module(AWSModule):
@@ -86,7 +90,7 @@ class Module(AWSModule):
             if query_id == None:
                 raise StratustrykeException(f'Unable retrieve query id from logs:StartQuery request: {res}')
             
-            self.framework.print_status(f'Started query for pattern {pattern}: {query_id}')
+            self.print_status(f'Started query for pattern {pattern}: {query_id}')
 
             poll = {'status': 'Running'}
             while poll.get('status', None) == 'Running':
@@ -110,12 +114,12 @@ class Module(AWSModule):
                     continue
 
                 else:
-                    if verbose: self.framework.print_line(f'{lg_name} - {message}')
+                    if verbose: self.print_line(f'{lg_name} - {message}')
                     lines.append(f'{lg_name} - {message}')
 
         except Exception as err:
-            self.framework.print_error(f'Exception throwing when performing query \'{query}\'')
-            self.framework.print_error(f'{err}')
+            self.print_error(f'Exception throwing when performing query \'{query}\'')
+            self.print_error(f'{err}')
             return False
 
         # Need to write to a file!
@@ -124,9 +128,9 @@ class Module(AWSModule):
             with open(Path(outfile), 'w') as file:
                 file.write('\n'.join(lines))
 
-            self.framework.print_success(f'Saved {len(lines)} records matching /{pattern}/ to {outfile}')
+            self.print_success(f'Saved {len(lines)} records matching /{pattern}/ to {outfile}')
         else:
-            self.framework.print_failure(f'No matching entries found for pattern /{pattern}/')
+            self.print_failure(f'No matching entries found for pattern /{pattern}/')
         
         return True
 
@@ -137,12 +141,12 @@ class Module(AWSModule):
         timedelta_days = self.get_opt(Module.OPT_TIMEDELTA)
         delay = self.get_opt(Module.OPT_POLL_DELAY)
         if delay < 1 or delay > 300:
-            self.framework.print_error(f'Polling delay \'{delay}\' should be within 1 to 300 seconds')
+            self.print_error(f'Polling delay \'{delay}\' should be within 1 to 300 seconds')
             return None
         
         lg_count = len(self.get_opt_multiline(Module.OPT_LOG_GROUPS))
         if lg_count > 49:
-            self.framework.print_error(f'Number of log groups provided, {lg_count}, is more than the 50 log group threshold.')
+            self.print_error(f'Number of log groups provided, {lg_count}, is more than the 50 log group threshold.')
             return None
 
         # Multi-line supported options

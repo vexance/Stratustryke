@@ -26,11 +26,11 @@ class Module(AWSModule):
 
             arn = res.get('Arn', res.get('UserId', None))
             if arn == None:
-                self.framework.print_failure('Unable to perform STS:GetCallerIdentity')
-            self.framework.print_success(f'Found principle - {arn}')
+                self.print_failure('Unable to perform sts:GetCallerIdentity')
+            self.print_success(f'Found principle {arn}')
             return True
 
         except Exception as err:
-            self.framework.print_error(f'{err}')
+            self.print_error(f'{err}')
             return False
 

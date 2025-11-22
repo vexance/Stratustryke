@@ -32,14 +32,14 @@ class Module(AWSModule):
             session = cred.session()
             client = session.client('sts')
             
-            self.framework.print_status(f'Performing sts get-access-key-info call...')
+            self.print_status(f'Performing sts:GetAccessKeyInfo call...')
             res = client.get_access_key_info(AccessKeyId=enum_key)
             target_account = res.get('Account')
             success = True
-            self.framework.print_success(f'Found Account Id \'{target_account}\'')
+            self.print_success(f'Found Account Id \'{target_account}\'')
         except Exception as err:
-            self.framework.print_error(f'{err}')
+            self.print_error(f'{err}')
             success = False
 
-        self.framework.print_line('')
+        self.print_line('')
         return success

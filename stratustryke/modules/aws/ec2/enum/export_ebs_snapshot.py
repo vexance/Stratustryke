@@ -1,7 +1,10 @@
-from stratustryke.core.module.aws import AWSModule
-from stratustryke.core.lib import StratustrykeException, module_data_dir
+
 from pathlib import Path
 from time import sleep
+
+from stratustryke.core.module.aws import AWSModule
+from stratustryke.lib import StratustrykeException, module_data_dir
+
 
 class Module(AWSModule):
 
@@ -60,7 +63,7 @@ class Module(AWSModule):
                 raise StratustrykeException('Unable to retrieve ID of the snaphshot copy.')
 
         except Exception as err:
-            self.framework.print_failure(f'{err}')
+            self.print_failure(f'{err}')
             return None
             
         return copy_id
@@ -83,11 +86,11 @@ class Module(AWSModule):
                     raise StratustrykeException(f'Unexpected snapshot state for {copy_id}: {state}')
 
                 if state == 'pending':
-                    self.framework.print_status(f'{copy_id} is in state \'{state}\', sleeping 15 seconds')
+                    self.print_status(f'{copy_id} is in state \'{state}\', sleeping 15 seconds')
                     sleep(15)        
                 
         except Exception as err:
-            self.framework.print_error(f'{err}')
+            self.print_error(f'{err}')
             return None
 
         return True
@@ -113,7 +116,7 @@ class Module(AWSModule):
                 token = res.get('NextToken', False)
 
         except Exception as err:
-            self.framework.print_failure(f'{err}')
+            self.print_failure(f'{err}')
             return None
 
         return blocks
@@ -149,7 +152,7 @@ class Module(AWSModule):
                 i += 1
 
         except Exception as err:
-            self.framework.print_failure(f'{err}')
+            self.print_failure(f'{err}')
             return None
 
         return True
@@ -166,7 +169,7 @@ class Module(AWSModule):
             res = client.delete_snapshot(SnapshotId=copy_id)
 
         except Exception as err:
-            self.framework.print_failure(f'{err}')
+            self.print_failure(f'{err}')
             return None
         
         return True
@@ -184,9 +187,9 @@ class Module(AWSModule):
         if copy_id == None:
             return
 
-        self.framework.print_success(f'Queued copy of snapshot \'{snap_id}\' as \'{copy_id}\', sleeping 15 seconds')
+        self.print_success(f'Queued copy of snapshot \'{snap_id}\' as \'{copy_id}\', sleeping 15 seconds')
         sleep(15)
-        self.framework.print_status('Verifying completion state...')
+        self.print_status('Verifying completion state...')
 
 
         # Wait for the snapshot copy to complete
@@ -194,18 +197,18 @@ class Module(AWSModule):
         if is_complete == None:
             return
 
-        self.framework.print_status(f'Completed copy of original snapshot {snap_id}')
-        self.framework.print_status(f'Listing blocks for snapshot: {copy_id}')
+        self.print_status(f'Completed copy of original snapshot {snap_id}')
+        self.print_status(f'Listing blocks for snapshot: {copy_id}')
         
         blocks = self.list_blocks(copy_id)
         if blocks == None:
             return
 
-        self.framework.print_status(f'Copying {len(blocks)} snapshot blocks to disk...')
+        self.print_status(f'Copying {len(blocks)} snapshot blocks to disk...')
         
         # Get path to output file
         if outfile == None:
-            self.framework.print_status(f'Outfile not specified, defaulting to {download_dir}/{snap_id}.ebs')
+            self.print_status(f'Outfile not specified, defaulting to {download_dir}/{snap_id}.ebs')
             outfile = Path(download_dir/f'copy_{snap_id}.ebs')
         else:
             outfile = Path(download_dir/outfile)
@@ -214,15 +217,15 @@ class Module(AWSModule):
         if is_complete == None:
             return
 
-        self.framework.print_success(f'Saved {snap_id} as \'{Path(download_dir)/outfile}\'')
-        self.framework.print_status(f'Queueing deletion of snapshot copy...')
+        self.print_success(f'Saved {snap_id} as \'{Path(download_dir)/outfile}\'')
+        self.print_status(f'Queueing deletion of snapshot copy...')
 
         is_complete = self.cleanup(copy_id)
         if is_complete == None:
-            self.framework.print_error(f'Could not remove snapshot {copy_id}; be sure to delete this manually via AWS console')
+            self.print_error(f'Could not remove snapshot {copy_id}; be sure to delete this manually via AWS console')
             return
 
-        self.framework.print_success(f'Deleted snapshot: {copy_id}')
+        self.print_success(f'Deleted snapshot: {copy_id}')
 
         return
 

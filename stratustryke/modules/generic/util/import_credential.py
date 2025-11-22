@@ -44,10 +44,10 @@ class Module(StratustrykeModule):
             cred = APICredential(alias, workspace, auth_type=auth_type, secret=secret, endpoint=url)
             self.framework.credentials.store_credential(cred)
         else:
-            self.framework.print_line(f'Invalid credential type: {cred_type}')
+            self.print_failure(f'Invalid credential type: {cred_type}')
             return False
 
-        self.framework.print_status(f'Imported credential with alias: {alias}')
+        self.print_status(f'Imported credential with alias: {alias}')
         return True
 
         return True

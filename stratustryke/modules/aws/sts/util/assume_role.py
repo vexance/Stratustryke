@@ -2,8 +2,8 @@
 from re import fullmatch
 
 from stratustryke.core.module.aws import AWSModule
-from stratustryke.core.credential import AWS_ROLE_ARN_REGEX
 from stratustryke.settings import on_linux
+from stratustryke.lib.regex import AWS_ROLE_ARN_REGEX
 
 
 class Module(AWSModule):
@@ -49,13 +49,13 @@ class Module(AWSModule):
         for entry in provided_arn:
             if not fullmatch(AWS_ROLE_ARN_REGEX, entry):
                 interpretted_arn = f'arn:aws:iam::{default_account_id}:role/{entry}'
-                self.framework.print_warning(f'Interpreting {entry} as {interpretted_arn}')
+                self.print_warning(f'Interpreting {entry} as {interpretted_arn}')
                 ret.append(interpretted_arn)
             else:
                 ret.append(entry)
 
         if len(ret) > 1:
-            self.framework.print_status(f'Ingested {len(ret)} targets')
+            self.print_status(f'Ingested {len(ret)} targets')
 
         return ret
 
@@ -91,20 +91,20 @@ class Module(AWSModule):
                 assumed_role_cred = cred.assume_role(arn, ext_id=ext_id, duration=duration, region=region, session_name=session_name, workspace=workspace, alias=cred_alias)
                 
                 if skip_import: # Just print that it succeeded
-                    self.framework.print_success(f'Successfully performed sts:AssumeRole for {arn}')
+                    self.print_success(f'Successfully performed sts:AssumeRole for {arn}')
                 else: # Add to cred db; should print itself anyway
                     self.framework.credentials.store_credential(assumed_role_cred)
 
                 if self.verbose: # print creds to be copy/pasted into env vars
                     env_prefix = 'export ' if on_linux else '$Env:'
 
-                    self.framework.print_line(f'{env_prefix}AWS_ACCESS_KEY_ID={assumed_role_cred._access_key_id}')
-                    self.framework.print_line(f'{env_prefix}AWS_SECRET_ACCESS_KEY={assumed_role_cred._secret_key}')
-                    self.framework.print_line(f'{env_prefix}AWS_SESSION_TOKEN={assumed_role_cred._session_token}')
+                    self.print_line(f'{env_prefix}AWS_ACCESS_KEY_ID={assumed_role_cred._access_key_id}')
+                    self.print_line(f'{env_prefix}AWS_SECRET_ACCESS_KEY={assumed_role_cred._secret_key}')
+                    self.print_line(f'{env_prefix}AWS_SESSION_TOKEN={assumed_role_cred._session_token}')
                 
             except Exception as err:
-                self.framework.print_failure(f'Failed to sts:AssumeRole on {arn}')
-                if self.verbose: self.framework.print_failure(str(err))
+                self.print_failure(f'Failed to sts:AssumeRole on {arn}')
+                if self.verbose: self.print_failure(str(err))
         
         return None
     

@@ -1,7 +1,10 @@
-from stratustryke.core.module import StratustrykeModule
-from stratustryke.core.lib import stratustryke_dir
+
 from pathlib import Path
-import requests
+
+from stratustryke.core.module import StratustrykeModule
+from stratustryke.lib import stratustryke_dir
+
+
 
 
 # Todo: Multithread / multiprocess to increase speed
@@ -102,26 +105,26 @@ class Module(StratustrykeModule):
         if (keywords == None or mutations == None): # error reading from the files; already printed error
             return False
         
-        self.framework.print_status('Creating mutated wordlist...')
+        self.print_status('Creating mutated wordlist...')
         wordlist = self.permutate(keywords, mutations)
         threads = self.get_opt(Module.OPT_THREADS)
 
         total = len(wordlist)
         percentiles = [int(total* (i * 0.1)) for i in range (1, 11)]
-        self.framework.print_status(f'Prepared {total} total mutations; beginning enumeration...')
+        self.print_status(f'Prepared {total} total mutations; beginning enumeration...')
         
         for i in range(0,len(wordlist)):
             if i in percentiles:
-                self.framework.print_status(f'Completed [{i}/{total}] total requests')
+                self.print_status(f'Completed [{i}/{total}] total requests')
             url = f'http://{wordlist[i]}.s3.amazonaws.com'
 
-            res = requests.get(url)
+            res = self.http_request('GET', url)
             if not '<Code>NoSuchBucket</Code>' in res.text:
                 if '<Code>AccessDenied</Code>' in res.text:
                     status = 'protected'
                 else:
                     status = 'open'
-                self.framework.print_success(f'Identified ({status}) S3 bucket: s3://{wordlist[i]}')
+                self.print_success(f'Identified ({status}) S3 bucket: s3://{wordlist[i]}')
 
         
         return True

@@ -1,7 +1,7 @@
 
 from stratustryke.core.module.aws import AWSModule
 from stratustryke.core.credential.aws import AWSCredential
-from stratustryke.core.lib import StratustrykeException
+from stratustryke.lib import StratustrykeException
 
 class Module(AWSModule):
 
@@ -77,7 +77,7 @@ class Module(AWSModule):
             return AWSCredential(f'stratustryke-{self.name}', access_key=access_key, secret_key=secret_key, session_token=token)
 
         except Exception as err:
-            self.framework.print_error(f'{err}')
+            self.print_error(f'{err}')
             return None
 
 
@@ -110,23 +110,23 @@ class Module(AWSModule):
     def run(self):
         role_arn = self.get_opt(Module.OPT_ROLE_ARN)
         
-        self.framework.print_status('Verifying supplied credentials can assume designated role')
+        self.print_status('Verifying supplied credentials can assume designated role')
         role_creds = self.assume_role(role_arn)
         if role_creds == None:
             return False # Unable to assume role - error was already printed
         
         # Check if we can access the bucket/object without specifying a s3:ResourceAccount policy
-        self.framework.print_status('Verifying bucket/object is public')
+        self.print_status('Verifying bucket/object is public')
         try:
             res = self.attempt_access(role_creds)
         except StratustrykeException as err:
-            self.framework.print_error(f'Cannot verify that the bucket/object is public')
-            self.framework.print_error(f'{err}')
+            self.print_error(f'Cannot verify that the bucket/object is public')
+            self.print_error(f'{err}')
             return False
 
         # Now try and derive the account id with s3:ResourceAccount policies
         builder = ''
-        self.framework.print_status('Starting account identification...')
+        self.print_status('Starting account identification...')
         
         try:
             for iteration in range(0, 12): # max 12 iterations (12 digit account id) to prevent off-chance infinite loop
@@ -140,18 +140,18 @@ class Module(AWSModule):
                         continue
                     if success:
                         builder = attempt
-                        self.framework.print_status(f'Found digit: [{iteration+1}/12]')
+                        self.print_status(f'Found digit: [{iteration+1}/12]')
                         break
 
         except StratustrykeException as err:
-            self.framework.print_error('Error during account idenfication process')
-            self.framework.print_error(f'{err}')
+            self.print_error('Error during account idenfication process')
+            self.print_error(f'{err}')
             return False
 
 
         if len(builder) < 12:
-            self.framework.print_error('Something went wrong; 12 digit account id not found')
+            self.print_error('Something went wrong; 12 digit account id not found')
             return False
 
         else:
-            self.framework.print_success(f'Identified AWS account id: {builder}')
+            self.print_success(f'Identified AWS account id: {builder}')

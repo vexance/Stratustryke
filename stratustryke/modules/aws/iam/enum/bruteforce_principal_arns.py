@@ -1,7 +1,8 @@
-from stratustryke.core.module.aws import AWSModule
+
 from pathlib import Path
-import requests
-from stratustryke.core.lib import StratustrykeException
+
+from stratustryke.core.module.aws import AWSModule
+from stratustryke.lib import StratustrykeException
 
 class Module(AWSModule):
 
@@ -57,28 +58,28 @@ class Module(AWSModule):
         account = self.get_opt(Module.OPT_ACCOUNT_ID)
 
         # Make sure the designated S3 bucket exists
-        self.framework.print_status('Verifying s3 bucket exists')
+        self.print_status('Verifying s3 bucket exists')
         try:
-            res = requests.get(f'http://{bucket}.s3.amazonaws.com')
+            res = self.http_request('GET', f'http://{bucket}.s3.amazonaws.com')
             if '<Code>NoSuchBucket</Code>' in res.text:
                 raise StratustrykeException(f'Could not verify bucket exists: s3://{bucket}')
 
         except Exception as err:
-            self.framework.print_failure(f'{err}')
+            self.print_failure(f'{err}')
             return
 
         # Attempt to load wordlist
         path = Path(self.get_opt(Module.OPT_WORDLIST))
         if not (path.exists() and path.is_file()):
-            self.framework.print_failure(f'Unable to load wordlist contents: {path.absolute()}')
+            self.print_failure(f'Unable to load wordlist contents: {path.absolute()}')
             return
 
         with open(path, 'r') as file:
             wordlist = [line.strip() for line in file.readlines()]
-        self.framework.print_status(f'Loaded {len(wordlist)} entries from {path}')        
+        self.print_status(f'Loaded {len(wordlist)} entries from {path}')        
         
         # Now enumerate the IAM principles
-        self.framework.print_status(f'Enumerating IAM principles in account: {account}')
+        self.print_status(f'Enumerating IAM principles in account: {account}')
         for principle in wordlist:
             user_policy = self.get_policy('user', principle)
             role_policy = self.get_policy('role', principle)
@@ -87,18 +88,18 @@ class Module(AWSModule):
 
             try:
                 client.put_bucket_policy(Bucket=bucket, Policy=user_policy)   
-                self.framework.print_success(f'arn:aws:iam::{account}:user/{principle}')
+                self.print_success(f'arn:aws:iam::{account}:user/{principle}')
             except Exception:
                 if verbose:
-                    self.framework.print_failure(f'arn:aws:iam::{account}:user/{principle}')
+                    self.print_failure(f'arn:aws:iam::{account}:user/{principle}')
                 self.framework._logger.info(f'Principle does not exist: arn:aws:iam::{account}:user/{principle}')
 
             try:
                 client.put_bucket_policy(Bucket=bucket, Policy=role_policy)
-                self.framework.print_success(f'arn:aws:iam::{account}:role/{principle}')
+                self.print_success(f'arn:aws:iam::{account}:role/{principle}')
             except Exception:
                 if verbose:
-                    self.framework.print_failure(f'arn:aws:iam::{account}:role/{principle}')
+                    self.print_failure(f'arn:aws:iam::{account}:role/{principle}')
                 self.framework._logger.info(f'Principle does not exist: arn:aws:iam::{account}:user/{principle}')
 
         

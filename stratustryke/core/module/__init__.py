@@ -11,7 +11,6 @@ from requests import request, Response
 from pathlib import Path
 
 from stratustryke.core.option import Options
-from stratustryke.core.framework import StratustrykeFramework
 from stratustryke.lib import StratustrykeException
 
 
@@ -19,8 +18,8 @@ class StratustrykeModule(object):
 
     OPT_VERBOSE = 'VERBOSE'
 
-    def __init__(self, framework: StratustrykeFramework) -> None:
-        self.framework: StratustrykeFramework = framework
+    def __init__(self, framework) -> None:
+        self.framework = framework
         self._info = { # set to false here to verify authors put this info in
             'Authors': False, # list[str} Authors who wrote the module
             'Details': False, # str detailed explanation of what the module does
@@ -113,7 +112,7 @@ class StratustrykeModule(object):
             else: return file.split('\\n')
         
         except Exception as err:
-            self.framework.print_error(f'Error reading contents of file: {file}')
+            self.print_error(f'Error reading contents of file: {file}')
             return None
 
 
@@ -177,7 +176,7 @@ class StratustrykeModule(object):
             # res = request(method, url, verify=verify, proxies=proxies, params=params, data=data, headers=headers, cookies=cookies, auth=auth,
             #               files=files, timeout=timeout, allow_redirects=allow_redirects, hooks=hooks, stream=stream, cert=cert, json=json)
         except Exception as err:
-            self.framework.print_error(f'Exception thrown ({type(err).__name__}) during HTTP/S request: {err}')
+            self.print_error(f'Exception thrown ({type(err).__name__}) during HTTP/S request: {err}')
             self.framework._logger.error(f'Exception thrown ({type(err).__name__}) during HTTP/S request: {err}')
             return None
         

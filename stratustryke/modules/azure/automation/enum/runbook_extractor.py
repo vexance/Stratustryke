@@ -1,8 +1,11 @@
-from stratustryke.core.module.azure import AzureModule
-from stratustryke.core.lib import module_data_dir
-from stratustryke.core.credential import AZ_MGMT_TOKEN_SCOPE
+
 import json
+
 from pathlib import Path
+
+from stratustryke.core.credential.microsoft import AZ_MGMT_TOKEN_SCOPE
+from stratustryke.core.module.azure import AzureModule
+from stratustryke.lib import module_data_dir
 
 
 class Module(AzureModule):
@@ -81,9 +84,9 @@ class Module(AzureModule):
         desc = metadata.get('properties', {}).get('description', '')
         params = metadata.get('properties', {}).get('parameters', {})
 
-        if tags != {}:   self.framework.print_status(f'{name} Tags: {tags}')
-        if params != {}: self.framework.print_status(f'{name} Parameters: {params}')
-        if desc != '':   self.framework.print_status(f'{name} Description: {desc}')
+        if tags != {}:   self.print_status(f'{name} Tags: {tags}')
+        if params != {}: self.print_status(f'{name} Parameters: {params}')
+        if desc != '':   self.print_status(f'{name} Description: {desc}')
 
         return None
     
@@ -130,36 +133,36 @@ class Module(AzureModule):
 
         for subscription in subscriptions:
 
-            self.framework.print_status(f'Retrieving automation accounts within subscription {subscription}')
+            self.print_status(f'Retrieving automation accounts within subscription {subscription}')
             
             status, accounts = self.list_automation_accounts(subscription)
 
             if status != 200:
                 if status == 401:
-                    self.framework.print_failure(f'[{status} Response] Not authorized to list accounts in this subscription')
+                    self.print_failure(f'[{status} Response] Not authorized to list accounts in this subscription')
                 elif status == 404:
-                    self.framework.print_warning(f'[{status} Response] Subscription not found, skipping')
-                else: self.framework.print_failure(f'[{status} Response] Unable to list automation accounts')
+                    self.print_warning(f'[{status} Response] Subscription not found, skipping')
+                else: self.print_failure(f'[{status} Response] Unable to list automation accounts')
                 continue
 
             if len(accounts) > 0:
-                self.framework.print_status(f'Searching for runbooks within {len(accounts)} automation accounts')
-            else: self.framework.print_warning(f'[{status} Response] No automation accounts found in {subscription}')
+                self.print_status(f'Searching for runbooks within {len(accounts)} automation accounts')
+            else: self.print_warning(f'[{status} Response] No automation accounts found in {subscription}')
 
             for account_path in accounts:
                 runbooks = self.list_runbooks(account_path)
 
                 for runbook_path in runbooks:
 
-                    self.framework.print_success(runbook_path)
+                    self.print_success(runbook_path)
                     if self.verbose: self.get_runbook_metadata(runbook_path)
                     if download: 
                         status, content, extension = self.get_runbook_content(runbook_path)
 
                         if status != 200:
                             if status == 401:
-                                self.framework.print_failure(f'[{status} Response] Not authorized to retrieve runbook content')
-                            else: self.framework.print_failure(f'[{status} Response] Unable to download runbook content')
+                                self.print_failure(f'[{status} Response] Not authorized to retrieve runbook content')
+                            else: self.print_failure(f'[{status} Response] Unable to download runbook content')
                         
                         else:
                             name_start = runbook_path.rfind('/')
@@ -169,10 +172,10 @@ class Module(AzureModule):
                             try:
                                 with open(f'{download_path}/{name}.{extension}', 'w') as file:
                                     file.write(content)
-                                self.framework.print_success(f'Downloaded to {download_path}/{subscription}-{name}.{extension}')
+                                self.print_success(f'Downloaded to {download_path}/{subscription}-{name}.{extension}')
 
                             except Exception as err:
-                                self.framework.print_error(f'Error writing runbook to disk: {err}')
+                                self.print_error(f'Error writing runbook to disk: {err}')
                                 
         return None
 

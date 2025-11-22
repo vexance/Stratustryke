@@ -28,7 +28,7 @@ class Module(AWSModule):
         cred = self.get_cred()
         target = self.get_opt(Module.OPT_TARGET_ACCOUNT_ID)
 
-        self.framework.print_status(f'Filtering ec2:DescribeSnapshots on owner-id: {target}')
+        self.print_status(f'Filtering ec2:DescribeSnapshots on owner-id: {target}')
         snapshots = []
         try:
             session = cred.session()
@@ -50,10 +50,10 @@ class Module(AWSModule):
                 pagination_token = res.get('NextToken', None)
 
         except Exception as err:
-            self.framework.print_failure(f'{err}')
+            self.print_failure(f'{err}')
 
         if len(snapshots) < 1:
-            self.framework.print_status(f'No public EBS snapshots found.')
+            self.print_status(f'No public EBS snapshots found.')
 
         for snap in snapshots:
             enc = 'Encrypted' if (snap.get('Encrypted', False)) else 'Unencrypted'
@@ -62,6 +62,6 @@ class Module(AWSModule):
             desc = snap.get('Description', '')
 
             if (snap_id != None):
-                self.framework.print_success(f'{enc} snapshot: {snap_id} ({size} GiB) - {desc}')
+                self.print_success(f'{enc} snapshot: {snap_id} ({size} GiB) - {desc}')
         
         return

@@ -1,8 +1,11 @@
-from stratustryke.core.module.azure import AzureModule
-from stratustryke.core.lib import module_data_dir
-from stratustryke.core.credential import AZ_MGMT_TOKEN_SCOPE
+
 import json
+
 from pathlib import Path
+
+from stratustryke.core.credential.microsoft import AZ_MGMT_TOKEN_SCOPE
+from stratustryke.core.module.azure import AzureModule
+from stratustryke.lib import module_data_dir
 
 
 class Module(AzureModule):
@@ -22,7 +25,7 @@ class Module(AzureModule):
         # self._options.add_string('ACCOUNT_PREFIX', 'Prefix for automation accounts to inclde (default: ALL) [S/F/P]')
         # self._options.add_string('RUNBOOK_PREFIX', 'Prefix for runbooks to include (default: ALL) [S/F/P]', False)
         self._options.add_boolean(Module.OPT_PRINT_PARAMS, 'When enabled, prints parameter values to framework output', True, True)
-        self._options.add_string(Module.OPT_DOWNLOAD_DIR, 'When set, saves full deployment specification to the directory', False, None)
+        self._options.add_string(Module.OPT_DOWNLOAD_DIR, 'When set, saves full deployment specification to the directory', False, str(module_data_dir(self.name)))
 
         
         self.auth_token = None

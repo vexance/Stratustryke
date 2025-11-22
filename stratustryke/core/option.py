@@ -3,9 +3,11 @@
 # Credit: Heavily inspired by @zeroSteiner's Options class for Termineter
 #
 
-from re import match
 import typing
-from stratustryke.core.lib import StratustrykeException
+
+from re import match
+
+from stratustryke.lib import StratustrykeException
 
 class Option:
     '''Module or framework option'''

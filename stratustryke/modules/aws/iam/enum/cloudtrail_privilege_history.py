@@ -1,7 +1,10 @@
-from stratustryke.core.module.aws import AWSModule
-from stratustryke.core.lib import StratustrykeException
-from datetime import datetime, timedelta
+
 import json
+
+from datetime import datetime, timedelta
+
+from stratustryke.core.module.aws import AWSModule
+
 
 class Module(AWSModule):
 
@@ -61,7 +64,7 @@ class Module(AWSModule):
             paginator = client.get_paginator('lookup_events')
 
             pages = paginator.paginate(LookupAttributes=attributes, StartTime=query_start, EndTime=query_end)
-            self.framework.print_status(f'Iterating through event pages...')
+            self.print_status(f'Iterating through event pages...')
 
             for page in pages:
                 events = [json.loads(e.get('CloudTrailEvent', {})) for e in page.get('Events', [])]
@@ -97,18 +100,18 @@ class Module(AWSModule):
                     else: self.trail_events[principal].add(msg)
                 
         except Exception as err:
-            self.framework.print_error(f'Error during cloudtrail:LookupEvents call: {err}')
+            self.print_error(f'Error during cloudtrail:LookupEvents call: {err}')
             return False
         
         return True
 
 
     def run(self):       
-        self.framework.print_status('Starting query for ReadOnly CloudTrail Insights events')
+        self.print_status('Starting query for ReadOnly CloudTrail Insights events')
         self.fetch_records(True)
 
         if not self.get_opt(Module.OPT_SKIP_NONREAD):
-            self.framework.print_status('Starting query for non-ReadOnly CloudTrail Insights events')
+            self.print_status('Starting query for non-ReadOnly CloudTrail Insights events')
             self.fetch_records(False)
 
         principals = self.get_opt_multiline(Module.OPT_PRINCIPAL_ARN, unique=True)
@@ -123,9 +126,9 @@ class Module(AWSModule):
                 msg = msg.replace(Module.OPT_PRINCIPAL_ARN, arn)
                 prefix = event[0:3]
 
-                if prefix == '[+]': self.framework.print_success(msg)
-                elif prefix == '[-]': self.framework.print_failure(msg)
-                else: self.framework.print_warning(msg)
+                if prefix == '[+]': self.print_success(msg)
+                elif prefix == '[-]': self.print_failure(msg)
+                else: self.print_warning(msg)
             
 
         return None

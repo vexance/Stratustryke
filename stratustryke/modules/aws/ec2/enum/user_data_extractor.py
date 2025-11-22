@@ -1,7 +1,9 @@
-from stratustryke.core.module.aws import AWSModule
-from pathlib import Path
-from stratustryke.core.lib import StratustrykeException, module_data_dir
+
 from base64 import b64decode
+from pathlib import Path
+
+from stratustryke.core.module.aws import AWSModule
+from stratustryke.lib import module_data_dir
 
 
 class Module(AWSModule):
@@ -51,8 +53,8 @@ class Module(AWSModule):
 
 
         except Exception as err:
-            self.framework.print_failure(f'Failed to perform ec2:DescribeInstances call')
-            self.framework.print_error(f'{err}')
+            self.print_failure(f'Failed to perform ec2:DescribeInstances call')
+            self.print_error(f'{err}')
             return []
         
         
@@ -83,21 +85,21 @@ class Module(AWSModule):
             # Show we've found the instance, if a name is assigned we'll display that too
             i_name = formatted_tags.get('Name', None)
             prefix = 'Found Instance' if (i_name == None) else f'Found ({i_state}) instance \'{i_name}\''
-            self.framework.print_success(f'{prefix} {i_arn}')
+            self.print_success(f'{prefix} {i_arn}')
 
             # Print tags if VERBOSE is on
             if VERBOSE and (len(formatted_tags.keys()) > 0):
-                self.framework.print_status(f'({i_id}) Instance Tags: {formatted_tags}')
+                self.print_status(f'({i_id}) Instance Tags: {formatted_tags}')
 
             # Obtain / show IAM role association
             iam_role = i.get('IamInstanceProfile', {}).get('Arn', None)
             if VERBOSE and (iam_role != None):
-                self.framework.print_status(f'({i_id}) IAM Association: {iam_role}')
+                self.print_status(f'({i_id}) IAM Association: {iam_role}')
 
             # Show assigned key at launch
             key_name = i.get('KeyName', None)
             if VERBOSE and (key_name != None):
-                self.framework.print_status(f'({i_id}) Keypair Name: {key_name}')
+                self.print_status(f'({i_id}) Keypair Name: {key_name}')
 
             ret.append(i_id)
 
@@ -115,8 +117,8 @@ class Module(AWSModule):
             return user_data
         
         except Exception as err:
-            self.framework.print_failure(f'Unable to retrieve user data for instance {instance_id}')
-            self.framework.print_error(f'{err}')
+            self.print_failure(f'Unable to retrieve user data for instance {instance_id}')
+            self.print_error(f'{err}')
             return None
         
     
@@ -136,13 +138,13 @@ class Module(AWSModule):
                     with open(f'{download_path}/{instance}.txt', 'w') as file:
                         file.write(content)
 
-                    self.framework.print_success(f'Wrote user data to {download_path}/{instance}.txt')
+                    self.print_success(f'Wrote user data to {download_path}/{instance}.txt')
 
                 except Exception as err:
-                    self.framework.print_error(f'Error writing user data: {err}')
+                    self.print_error(f'Error writing user data: {err}')
             
             else:
-                self.framework.print_status(f'No user data found for {instance}')
+                self.print_status(f'No user data found for {instance}')
 
                 
 

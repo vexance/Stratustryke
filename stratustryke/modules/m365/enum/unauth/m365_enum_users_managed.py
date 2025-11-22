@@ -31,7 +31,7 @@ class Module(StratustrykeModule):
         domains = self.lines_from_string_opt('DOMAIN', unique=True)
 
         if domains == None:
-            self.framework.print_status('No M365 domain specified; only email addresses set in option USERNAME will be enumerated')
+            self.print_status('No M365 domain specified; only email addresses set in option USERNAME will be enumerated')
 
         addresses = []
         for user in usernames:
@@ -41,7 +41,7 @@ class Module(StratustrykeModule):
                 addresses.append(user)
             else: # just 'user
                 if domains == None:
-                    self.framework.print_warning(f'Skipping \'{user}\' because no domain(s) specified')
+                    self.print_warning(f'Skipping \'{user}\' because no domain(s) specified')
                     continue
 
                 addresses.extend([f'{user}@{domain}' for domain in domains])
@@ -158,19 +158,19 @@ class Module(StratustrykeModule):
                     if environments[domain] == "MANAGED":
                         # NotThrottled:0,AadThrottled:1,MsaThrottled:2
                         if not throttleStatus == 0:
-                            self.framework.print_warning(f'{email} - Possible throttle detected on request')
+                            self.print_warning(f'{email} - Possible throttle detected on request')
                         if ifExistsResult in ['0', '6']: #Valid user found!
-                            self.framework.print_success(f'{email} - Valid user')
+                            self.print_success(f'{email} - Valid user')
                         elif ifExistsResult == '5': # Different identity provider, but still a valid email address
-                            self.framework.print_status(f'{email} - Valid user with different IDP')
+                            self.print_status(f'{email} - Valid user with different IDP')
                         elif ifExistsResult == '1':
-                            self.framework.print_failure(f'{email} - Invalid user')
+                            self.print_failure(f'{email} - Invalid user')
                         else:                    
-                            self.framework.print_warning(f'{email} - {ifExistsResultCodes[ifExistsResult]}')
+                            self.print_warning(f'{email} - {ifExistsResultCodes[ifExistsResult]}')
                     else:
-                        self.framework.print_warning(f'{email} - Domain type \'{environments[domain]}\' not supported')
+                        self.print_warning(f'{email} - Domain type \'{environments[domain]}\' not supported')
                 else:
-                    self.framework.print_warning(f'{email} - Request error')
+                    self.print_warning(f'{email} - Request error')
             else:
-                self.framework.print_warning(f'{email} - Domain type \'{environments[domain]}\' not supported')
+                self.print_warning(f'{email} - Domain type \'{environments[domain]}\' not supported')
 

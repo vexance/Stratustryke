@@ -24,14 +24,14 @@ class Module(AWSModule):
         cred = self.get_cred(region=region)
         verbose = self.get_opt(Module.OPT_VERBOSE)
 
-        self.framework.print_status(f'Enumerating API privileges...')
+        self.print_status(f'Enumerating API privileges...')
 
         total = sum([len(BRUTEFORCE_TESTS[key]) for key in BRUTEFORCE_TESTS.keys()])
         percentiles = [int(total* (i * 0.05)) for i in range (1, 21)]
 
         session = cred.session()
         i = 0
-        self.framework.print_status(f'Attempting {total} total API calls')
+        self.print_status(f'Attempting {total} total API calls')
         # Iterate through services
         for service in BRUTEFORCE_TESTS.keys():
             calls = BRUTEFORCE_TESTS[service]
@@ -44,7 +44,7 @@ class Module(AWSModule):
                 for j in range (0, len(calls)):
                     i += 1
                     if i in percentiles:
-                        self.framework.print_status(f'[{i} / {total}] checks completed')
+                        self.print_status(f'[{i} / {total}] checks completed')
                 continue
 
             # Iterate through API calls in a service
@@ -60,25 +60,25 @@ class Module(AWSModule):
                     else:
                         res = api_function()
                     
-                    self.framework.print_success(f'{service}:{"".join(split)}')
+                    self.print_success(f'{service}:{"".join(split)}')
 
                 except (botocore.exceptions.ClientError, botocore.exceptions.EndpointConnectionError,
                         botocore.exceptions.ConnectTimeoutError, botocore.exceptions.ReadTimeoutError):
                     if verbose:
-                        self.framework.print_failure(f'{service}:{"".join(split)}')
+                        self.print_failure(f'{service}:{"".join(split)}')
                     self.framework._logger.error(f'{service}:{"".join(split)} failed.')
 
                 except botocore.exceptions.ParamValidationError:
                     self.framework._logger.error(f'botocore.exceptions.ParamValidationError raised in {service}:{"".join(split)} call.')
 
                 except Exception as err:
-                    self.framework.print_error(f'{err}')
+                    self.print_error(f'{err}')
                     self.framework._logger.err(f'{err}')
                 
                 
                 i += 1
                 if i in percentiles:
-                    self.framework.print_status(f'[{i} / {total}] checks completed')
+                    self.print_status(f'[{i} / {total}] checks completed')
 
         return True
 

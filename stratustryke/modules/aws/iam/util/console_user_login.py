@@ -1,13 +1,15 @@
-from stratustryke.core.module import StratustrykeModule
-from pathlib import Path
-from requests import Session
-from stratustryke.core.lib import StratustrykeException
-from urllib.parse import urlparse, parse_qs, quote_plus
-from json import loads
+
 import time
 
-class ThrottlingException(Exception):
-    pass
+from json import loads
+from urllib.parse import urlparse, parse_qs, quote_plus
+from pathlib import Path
+from requests import Session
+
+from stratustryke.core.module import StratustrykeModule
+from stratustryke.lib import StratustrykeException
+from stratustryke.lib.exception import ThrottlingException
+
 
 class Module(StratustrykeModule):
 
@@ -107,7 +109,7 @@ class Module(StratustrykeModule):
                 raise StratustrykeException(f'Error - invalid authentication response for {user}:{pwd}')
         
         except Exception as err:
-            self.framework.print_error(f'{err}')
+            self.print_error(f'{err}')
             return (-1, None)
 
         return res.status_code, res_data
@@ -131,26 +133,26 @@ class Module(StratustrykeModule):
                 if state == None: raise StratustrykeException(f'Error Invalid response state for {user}:{pwd}')
 
                 if state == 'FAIL':
-                    self.framework.print_failure(f'Invalid login - {user}:{pwd}')
+                    self.print_failure(f'Invalid login - {user}:{pwd}')
                 
                 elif (state == 'SUCCESS'):
                     result = res.get('properties', {}).get('result', None)
                     if result == None: raise StratustrykeException(f'Error - invalid response result for {user}:{pwd}')
 
                     if result == 'SUCCESS':
-                        self.framework.print_success(f'Successful login without MFA - {user}:{pwd}')
+                        self.print_success(f'Successful login without MFA - {user}:{pwd}')
 
                     elif result == 'MFA':
                         mfatype = res.get('properties', {}).get('mfaType', 'Unknown')
-                        self.framework.print_failure(f'MFA ({mfatype}) required for user - {user}')
+                        self.print_failure(f'MFA ({mfatype}) required for user - {user}')
 
             except ThrottlingException:
-                self.framework.print_status(f'Potential throttling detected on {user}, sleeping 5 seconds...')
+                self.print_status(f'Potential throttling detected on {user}, sleeping 5 seconds...')
                 throttled.append(user)
                 time.sleep(5)
 
             except Exception as err:
-                self.framework.print_error(f'{err}')
+                self.print_error(f'{err}')
             
             time.sleep(delay)
 
@@ -174,18 +176,15 @@ class Module(StratustrykeModule):
             usernames = sorted(set(usernames), key = lambda idx: usernames.index(idx))
             if ('' in usernames): usernames.remove('')
 
-        self.framework.print_status(f'Spraying against {len(usernames)} potential user(s)')
+        # Using Session.get() rather than self.http_request()
+        self.print_warning(f'This module currently does not use framework web proxies')
+        self.print_status(f'Spraying against {len(usernames)} potential user(s)')
 
         throttled = self.password_spray(usernames, passwd)
 
         if len(throttled) > 0:
-            self.framework.print_status(f'Re-trying login for {len(throttled)} potentially throttled requests')
+            self.print_status(f'Re-trying login for {len(throttled)} potentially throttled requests')
             self.password_spray(throttled, passwd)
         
 
         
-
-        
-
-
-

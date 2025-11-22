@@ -60,24 +60,24 @@ class Module(AWSModule):
 
                     if name.startswith(prefix):
                         lambdas.append(name)
-                        self.framework.print_success(f'Found {arn} ({version})')
+                        self.print_success(f'Found {arn} ({version})')
                         
                         if verbose and role != None:
-                            self.framework.print_status(f'({name}) Execution Role: {role}')
+                            self.print_status(f'({name}) Execution Role: {role}')
 
                         if verbose and envs != None:
-                            self.framework.print_status(f'({name}) Environment Variables: {envs}')
+                            self.print_status(f'({name}) Environment Variables: {envs}')
 
                         if verbose and desc != None and desc != '':
-                            self.framework.print_status(f'({name}) Function Description: {desc}')
+                            self.print_status(f'({name}) Function Description: {desc}')
 
         except Exception as err:
-            self.framework.print_error(f'Error during lambda:ListFunctions operation: {err}')
+            self.print_error(f'Error during lambda:ListFunctions operation: {err}')
             if lambdas == []:
-                self.framework.print_warning(f'Attempting to continue targeting lambda function \'{prefix}\'')
+                self.print_warning(f'Attempting to continue targeting lambda function \'{prefix}\'')
                 return [prefix]
             else:
-                self.framework.print_warning(f'Attempting to continue with {len(lambdas)} retrieved functions')
+                self.print_warning(f'Attempting to continue with {len(lambdas)} retrieved functions')
         
         return lambdas
     
@@ -93,7 +93,7 @@ class Module(AWSModule):
             presigned_url = res.get('Code', {}).get('Location')
 
         except Exception as err:
-            self.framework.print_error(f'Error during lambda:GetFunction operation: {err}')
+            self.print_error(f'Error during lambda:GetFunction operation: {err}')
             return None
 
         return presigned_url
@@ -121,11 +121,11 @@ class Module(AWSModule):
                 for chunk in res.iter_content(chunk_size=8192):
                     file.write(chunk)
 
-            self.framework.print_success(f'Downloaded {download_path}/{name}.zip')
+            self.print_success(f'Downloaded {download_path}/{name}.zip')
 
         except Exception as err:
-            self.framework.print_error(f'({name}) Error downloading lambda source: {err}')
-            self.framework.print_warning(f'({name}) Pre-Signed URL: {s3_url}')
+            self.print_error(f'({name}) Error downloading lambda source: {err}')
+            self.print_warning(f'({name}) Pre-Signed URL: {s3_url}')
             return False
 
         return True
@@ -133,7 +133,7 @@ class Module(AWSModule):
     
     def run(self):
         matches = self.list_lambdas()
-        self.framework.print_status(f'Attempting to extract code for {len(matches)} function(s)...')
+        self.print_status(f'Attempting to extract code for {len(matches)} function(s)...')
 
         for func in matches:
             self.download_source(func)
