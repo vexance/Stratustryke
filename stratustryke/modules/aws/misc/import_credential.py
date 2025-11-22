@@ -1,6 +1,7 @@
 
-from stratustryke.core.credential import AWSCredential
+
 from stratustryke.core.module.aws import AWSModule
+from stratustryke.core.credential.aws import AWSCredential
 from stratustryke.settings import AWS_DEFAULT_REGION
 
 class Module(AWSModule):

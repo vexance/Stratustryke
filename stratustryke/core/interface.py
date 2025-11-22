@@ -4,18 +4,25 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-from pathlib import Path
+import os
+import logging
 import stratustryke
-import stratustryke.core.command
-import stratustryke.core.framework
-import stratustryke.settings
-import stratustryke.core.lib
-import stratustryke.core.credential
+
 from re import match as regex_match
 from termcolor import colored
 from time import sleep
-import os
-import logging
+from pathlib import Path
+
+from stratustryke import settings
+# import stratustryke.settings as settings
+from stratustryke.core.command import Command, command, argument
+# import stratustryke.core.command
+from stratustryke.core.framework import StratustrykeFramework
+from stratustryke.core.lib import home_dir
+from stratustryke.core.credential.aws import AWSCredential
+from stratustryke.core.credential.microsoft import MicrosoftCredential, M365_GRAPH_TOKEN_SCOPE, AZ_MGMT_TOKEN_SCOPE
+
+
 
 # === Utility functions for filesytem path completion === #
 
@@ -76,7 +83,7 @@ def complete_path(str_path: str, files: bool = True, dirs: bool = True) -> list:
         
 
 # === CLI console Interpreter - interprets stratustryke.Command objects === #
-class InteractiveInterpreter(stratustryke.core.command.Command):
+class InteractiveInterpreter(Command):
     ruler = '+'
     doc_header = 'Enter help <command> For Information and List of available commands:'
 
@@ -87,7 +94,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         if not self.use_rawinput:
             pass
             #self._disabled_commands.append() # Not disabling any commands as of v0.0.1
-        if not stratustryke.settings.on_linux:
+        if not settings.on_linux:
             pass
             #self._hidden_commands.append() # Not hiding any commands on linux as of v.0.0.1
         self._hidden_commands.extend(['cd', 'ls', 'cat', 'dir', 'type', 'pwd'])
@@ -99,7 +106,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         self._logger = logging.getLogger('stratustryke.interpreter')
 
         # init framework
-        self.framework = stratustryke.core.framework.StratustrykeFramework(stdout=stdout)
+        self.framework = StratustrykeFramework(stdout=stdout)
         self.print_error = self.framework.print_error # magenta [x] msg
         self.print_status = self.framework.print_status # blue [*] msg
         self.print_warning = self.framework.print_warning # yellow [!] msg
@@ -120,10 +127,10 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         # Attempt to read commands from history
         try:
             import readline
-            readline.read_history_file(str(stratustryke.core.lib.home_dir()/'history.txt'))
+            readline.read_history_file(str(home_dir()/'history.txt'))
             readline.set_completer_delims(readline.get_completer_delims().replace('/', ''))
         except (ImportError, IOError):
-            self._logger.error(f'Failed to import stratutryke history from {stratustryke.core.lib.home_dir()/"history.txt"}')
+            self._logger.error(f'Failed to import stratutryke history from {home_dir()/"history.txt"}')
 
 
     # === Startup intro banner and CLI prompt === #
@@ -158,13 +165,13 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # === resource file, server, and module re-load utility === #
 
     def run_rc_file(self, rc_file: str):
-        '''Pass to stratustryke.core.command.Command.run_rc_file()'''
+        '''Pass to command.run_rc_file()'''
         self._logger.info(f'Opening {rc_file} for command processing')
         return super().run_rc_file(rc_file)
 
 
     def serve(cls, *args, **kwargs):
-        '''Pass to stratustryke.core.command.Command.serve() after setting rc_file to None'''
+        '''Pass to command.serve() after setting rc_file to None'''
         init_kwargs = kwargs.pop('init_kwargs', {})
         init_kwargs['rc_file'] = None
         kwargs['init_kwargs'] = init_kwargs
@@ -207,7 +214,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Action: prints the startup intro banner, showing ascii text art, version, and number of modules loaded
     # Syntax: 'banner'
 
-    @stratustryke.core.command.command('Display initial startup banner')
+    @command('Display initial startup banner')
     def do_banner(self, args):
         self.print_line(self.intro)
     
@@ -217,11 +224,11 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Syntax: 'clear'
     # Aliases: 'cls'
 
-    @stratustryke.core.command.command('Clear terminal screen')
+    @command('Clear terminal screen')
     def do_clear(self, args):
-        if stratustryke.settings.on_linux:
+        if settings.on_linux:
             os.system('clear')
-        elif stratustryke.settings.on_windows:
+        elif settings.on_windows:
             os.system('cls')
         else:
             self.print_line(f'Unknown system OS is not Linux or Windows')
@@ -236,8 +243,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Syntax: 'cd <directory>'
     # Text Completion: paths to local filesystem directories
 
-    @stratustryke.core.command.command('Change current working directory')
-    @stratustryke.core.command.argument('path', nargs='?', help = 'Path to change directories to')
+    @command('Change current working directory')
+    @argument('path', nargs='?', help = 'Path to change directories to')
     def do_cd(self, args):
         if not args.path:
             self.print_line(f'Command \'cd\' requires a path{os.linesep}')
@@ -256,7 +263,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Action: Prints the current working directory for the stratustryke interpreter context
     # Syntax: 'pwd'
 
-    @stratustryke.core.command.command('Print current working directory')
+    @command('Print current working directory')
     def do_pwd(self, args):
         self.print_line(f'{os.getcwd()}{os.linesep}')
 
@@ -267,8 +274,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Text Completion: paths to local filesystem directories
     # Aliases: 'dir'
 
-    @stratustryke.core.command.command('List directory contents')
-    @stratustryke.core.command.argument('path', nargs='?', help = 'Directory to list contents of')
+    @command('List directory contents')
+    @argument('path', nargs='?', help = 'Directory to list contents of')
     def do_ls(self, args):
         if not args.path:
             args.path = '.'
@@ -308,8 +315,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Text Completion: paths to local filesystem files
     # Aliases: 'type'
 
-    @stratustryke.core.command.command('Print a file to the interpreter output')
-    @stratustryke.core.command.argument('file', nargs='*', help = 'File(s) to print contents of')
+    @command('Print a file to the interpreter output')
+    @argument('file', nargs='*', help = 'File(s) to print contents of')
     def do_cat(self, args):
         if not args.file:
             self.print_line(f'Command \'cat\' requires a file passed as an arguement{os.linesep}')
@@ -340,7 +347,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Action: Closes the stratustryke interpreter
     # Syntax: 'exit'
 
-    @stratustryke.core.command.command('Exit the Stratustryke interpreter')
+    @command('Exit the Stratustryke interpreter')
     def do_exit(self, args):
         self._logger.info('Recevied exit command')
         # Add closing quotes here?
@@ -351,9 +358,9 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
 
         try: # Try to copy command history to 'home/<user>/.local/strautsryke/history.txt
             import readline
-            readline.write_history_file(str(stratustryke.core.lib.home_dir()/'history.txt'))
+            readline.write_history_file(str(home_dir()/'history.txt'))
         except (ImportError, IOError):
-            self._logger.error(f'Exception thrown while writing command history to {stratustryke.core.lib.home_dir()/"history.txt"}')
+            self._logger.error(f'Exception thrown while writing command history to {home_dir()/"history.txt"}')
         
         super().do_exit(args)
 
@@ -371,8 +378,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Syntax: 'loglevel', 'loglevel <level>'
     # Text Completion: log level options: debug, info, warning, error, critical
 
-    @stratustryke.core.command.command('Set or show log level options / current setting')
-    @stratustryke.core.command.argument('level', nargs='?', help = 'Log level to set [DEBUG, INFO, WARNING, ERROR, CRITICAL]')
+    @command('Set or show log level options / current setting')
+    @argument('level', nargs='?', help = 'Log level to set [DEBUG, INFO, WARNING, ERROR, CRITICAL]')
     def do_loglevel(self, args):
         # Check that the log handler exists
         if self.log_handler == None:
@@ -407,8 +414,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Syntax: 'info', 'info <module>'
     # Text Completion: Modules loaded into the framework
 
-    @stratustryke.core.command.command('Display module information')
-    @stratustryke.core.command.argument('module', nargs = '?', help = 'Module for which to display information for')
+    @command('Display module information')
+    @argument('module', nargs = '?', help = 'Module for which to display information for')
     def do_info(self, args):
         
         # no module supplied and no current module set
@@ -450,7 +457,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Action: selects the last module as the current module, sets current module to the last module
     # Syntax: 'previous'
 
-    @stratustryke.core.command.command('Use the last prior module')
+    @command('Use the last prior module')
     def do_previous(self, args):
         if self.last_module == None: # if this is NOT none, the framework's current will also not be none
             self.print_line('No module previously selected')
@@ -464,7 +471,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Actions: Performs validation checks of options against the current module
     # Syntax: 'validate'
 
-    @stratustryke.core.command.command('Perform module validation checks')
+    @command('Perform module validation checks')
     def do_validate(self, args):
         if self.framework.current_module == None:
             self.print_line('No module currently selected')
@@ -481,7 +488,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Action: Unsets the currently selected module, returning user to default prompt
     # Syntax: 'back'
 
-    @stratustryke.core.command.command('Close the module and return to default framework context')
+    @command('Close the module and return to default framework context')
     def do_back(self, args):
         self.framework.current_module = None
 
@@ -492,8 +499,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Text Completion: modules loaded into the framework
     # Todo: Broken - disabling for now; Not working currently
 
-    # @stratustryke.core.command.command('Reloads a module in the framework')
-    # @stratustryke.core.command.argument('module', nargs='?', help = 'The module to re-load')
+    # @command('Reloads a module in the framework')
+    # @argument('module', nargs='?', help = 'The module to re-load')
     # def do_reload(self, args):
     #     if args.module != None:
     #         if args.module not in self.framework.modules:
@@ -519,9 +526,9 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Syntax: 'set <option-name> <new-value>'
     # Text Completion: Options for the current module
 
-    @stratustryke.core.command.command('Set the value for a module\'s option')
-    @stratustryke.core.command.argument('option_name', metavar='option', help = 'Name of option to set value for')
-    @stratustryke.core.command.argument('option_value', metavar='value', help = 'New value to set the option to')
+    @command('Set the value for a module\'s option')
+    @argument('option_name', metavar='option', help = 'Name of option to set value for')
+    @argument('option_value', metavar='value', help = 'New value to set the option to')
     def do_set(self, args):
         if self.framework.current_module: # get options for current module
             opts = self.framework.current_module._options
@@ -576,8 +583,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         return completions
 
 
-    @stratustryke.core.command.command('Unset the value for a module\'s option (i.e., set the option to None)')
-    @stratustryke.core.command.argument('option_name', metavar='option', help = 'Name of the option to unset')
+    @command('Unset the value for a module\'s option (i.e., set the option to None)')
+    @argument('option_name', metavar='option', help = 'Name of the option to unset')
     def do_unset(self, args):
         if self.framework.current_module: # get options for current module
             opts = self.framework.current_module._options
@@ -607,8 +614,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Syntax: 'paste <option-name>'
     # Text Completion: Options for the current module
 
-    @stratustryke.core.command.command('Set the value for a module\'s string-type option while supporting multi-line input. Prefixes the input with \'paste:\' and relies on the module to handle this properly')
-    @stratustryke.core.command.argument('option_name', metavar='option', help = 'Name of option to paste value for')
+    @command('Set the value for a module\'s string-type option while supporting multi-line input. Prefixes the input with \'paste:\' and relies on the module to handle this properly')
+    @argument('option_name', metavar='option', help = 'Name of option to paste value for')
     def do_paste(self, args):
         if self.framework.current_module: # get options for current module
             opts = self.framework.current_module._options
@@ -666,8 +673,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Syntax: 'options', 'options <module>'
     # Text Completion: modules loaded into the framework
 
-    @stratustryke.core.command.command('Show options for the current or specified module')
-    @stratustryke.core.command.argument('module', nargs='?', help = 'Module to display options for')
+    @command('Show options for the current or specified module')
+    @argument('module', nargs='?', help = 'Module to display options for')
     def do_options(self, args):      
         # no module supplied and no current module set
         if args.module == None: # no module specifed
@@ -699,8 +706,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
         return [i for i in self.framework.modules.keys() if i.startswith(text)]
     
 
-    @stratustryke.core.command.command('Show advanced options for the current or specified module')
-    @stratustryke.core.command.argument('module', nargs='?', help = 'Module to display advanced options for')
+    @command('Show advanced options for the current or specified module')
+    @argument('module', nargs='?', help = 'Module to display advanced options for')
     def do_advanced(self, args):
         # no module supplied and no current module set
         if args.module == None: # no module specifed
@@ -751,8 +758,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Syntax: 'show modules', 'show config', 'show options', 'show info'
     # Text Completion: modules, config, options, info
 
-    @stratustryke.core.command.command('Show requested information for modules, configurations, or module options')
-    @stratustryke.core.command.argument('what', choices=('modules', 'config', 'options'), help = 'Type of information to display')
+    @command('Show requested information for modules, configurations, or module options')
+    @argument('what', choices=('modules', 'config', 'options'), help = 'Type of information to display')
     def do_show(self, args):
         ''''Command: 'show <what>' displays information based off what information is requested'''
         headers, rows = [], []
@@ -799,9 +806,9 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Syntax: 'config', 'config <name> <new-value>'
     # Text Completion: framework configuration option names
 
-    @stratustryke.core.command.command('Show or set framework configuration options')
-    @stratustryke.core.command.argument('config_name', metavar='config', default=None, nargs='?', help='If setting a config, the config option to update')
-    @stratustryke.core.command.argument('config_val', metavar='value', default=None, nargs='?', help='If setting a config, the value to update it to')
+    @command('Show or set framework configuration options')
+    @argument('config_name', metavar='config', default=None, nargs='?', help='If setting a config, the config option to update')
+    @argument('config_val', metavar='value', default=None, nargs='?', help='If setting a config, the value to update it to')
     def do_config(self, args):
         '''Command: 'config <action> [name] [val]' shows or sets framework config options'''
 
@@ -864,8 +871,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Syntax: 'use <module>'
     # Text Completion: modules loaded into the framework
 
-    @stratustryke.core.command.command('Select a module for use')
-    @stratustryke.core.command.argument('module', help = 'The module to select')
+    @command('Select a module for use')
+    @argument('module', help = 'The module to select')
     def do_use(self, args):
         if args.module not in self.framework.modules:
             self.print_line(f'Could not find module: \'{args.module}\', ensure the full module path is specified')
@@ -884,8 +891,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Syntax: 'creds', 'creds <alias>'
     # Text Complete: Saved credential aliases
 
-    @stratustryke.core.command.command('Show or load credentials from the stratustryke credstore')
-    @stratustryke.core.command.argument('alias', nargs='?', help = 'Credentials to load for the selected module')
+    @command('Show or load credentials from the stratustryke credstore')
+    @argument('alias', nargs='?', help = 'Credentials to load for the selected module')
     def do_creds(self, args):
         if args.alias == None:
             workspace = self.framework._config.get_val('WORKSPACE')
@@ -937,8 +944,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Syntax: 'rmcred <alias>'
     # Text Complete: Saved Credential aliases
 
-    @stratustryke.core.command.command('Remove a credential from the credstore')
-    @stratustryke.core.command.argument('alias', help='Credential to remove from the credstore')
+    @command('Remove a credential from the credstore')
+    @argument('alias', help='Credential to remove from the credstore')
     def do_rmcred(self, args):
         if args.alias not in self.framework.credentials.keys():
             self.print_line(f'Credential alias \'{args.alias}\' not found')
@@ -956,10 +963,10 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Syntax: 'mkcred <type>' where type is in the enum set: 'aws', 'azure', 'gcp', 'generic', 'm365'
     # Text Completion: Completes <type> with 'aws', 'azure', 'gcp', 'generic', 'm365'
 
-    @stratustryke.core.command.command('Import a credential into the framework\'s credential manager')
-    @stratustryke.core.command.argument('cred_type', metavar='type', choices=('aws', 'amazon', 'az', 'azure', 'm365', 'token', 'generic'), help = 'Type of credential to import')
-    @stratustryke.core.command.argument('cred_alias', metavar='alias', help = 'Alias name for the credential to import (must be unique amongst cred aliases)')
-    @stratustryke.core.command.argument('workspace', default=stratustryke.settings.DEFAULT_WORKSPACE, nargs='?', help = f'Workspace to import the credential into [default: \'{stratustryke.settings.DEFAULT_WORKSPACE}]\'')
+    @command('Import a credential into the framework\'s credential manager')
+    @argument('cred_type', metavar='type', choices=('aws', 'amazon', 'az', 'azure', 'm365', 'token', 'generic'), help = 'Type of credential to import')
+    @argument('cred_alias', metavar='alias', help = 'Alias name for the credential to import (must be unique amongst cred aliases)')
+    @argument('workspace', default=settings.DEFAULT_WORKSPACE, nargs='?', help = f'Workspace to import the credential into [default: \'{settings.DEFAULT_WORKSPACE}]\'')
     def do_mkcred(self, args):
        
        # AWS principal creds (access keys)
@@ -975,13 +982,13 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
                 session_token = input('  AWS Session Token [None]: ')
                 self.framework.spool_message(f'  AWS Session Token: {session_token}{os.linesep}')
             
-            region = input(f'  Default AWS Region [{stratustryke.settings.AWS_DEFAULT_REGION}]: ')
-            self.framework.spool_message(f'  Default AWS Region [{stratustryke.settings.AWS_DEFAULT_REGION}]: {region}{os.linesep}')
-            if region == '': region = stratustryke.settings.AWS_DEFAULT_REGION
+            region = input(f'  Default AWS Region [{settings.AWS_DEFAULT_REGION}]: ')
+            self.framework.spool_message(f'  Default AWS Region [{settings.AWS_DEFAULT_REGION}]: {region}{os.linesep}')
+            if region == '': region = settings.AWS_DEFAULT_REGION
 
             # First None val passed is for account id (to be deprecated in place of a property derived from GetCallerIdentity)
             # Second None val is for ARN (also to be deprecated and replaced with property derived from GetCallerIdentity)
-            cred = stratustryke.core.credential.AWSCredential(args.cred_alias, args.workspace, False, None, access_key, access_key, secret_key, session_token, region, None)
+            cred = AWSCredential(args.cred_alias, args.workspace, False, None, access_key, access_key, secret_key, session_token, region, None)
             self.framework.credentials.store_credential(cred)
 
 
@@ -995,7 +1002,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
 
             if principal == '' or principal == None:
                 self.framework.spool_message('Starting interactive authentication...')
-                cred = stratustryke.core.credential.MicrosoftCredential(args.cred_alias, args.workspace, tenant=tenant, interactive=True)
+                cred = MicrosoftCredential(args.cred_alias, args.workspace, tenant=tenant, interactive=True)
                 cred.store_token()
 
             else:
@@ -1013,8 +1020,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
                     self.framework.print_error('User principals must be supplied as full email addresses')
                     return None
                 
-                scope = stratustryke.core.credential.M365_GRAPH_TOKEN_SCOPE if (args.cred_type == 'm365') else stratustryke.core.credential.AZ_MGMT_TOKEN_SCOPE
-                cred = stratustryke.core.credential.MicrosoftCredential(args.cred_alias, args.workspace, tenant=tenant, principal=principal, secret=secret, token_scope=scope)
+                scope = M365_GRAPH_TOKEN_SCOPE if (args.cred_type == 'm365') else AZ_MGMT_TOKEN_SCOPE
+                cred = MicrosoftCredential(args.cred_alias, args.workspace, tenant=tenant, principal=principal, secret=secret, token_scope=scope)
                 
                 try:
                     token = cred.access_token()
@@ -1048,8 +1055,8 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Syntax: 'spool <filename>', 'spool off'
     # Text Completion: directories on the local filesystem
     
-    @stratustryke.core.command.command('Enable or disable spooling of stratustryke output to a file')
-    @stratustryke.core.command.argument('path', help = '\'off\' or file to enable / switch spooling to')
+    @command('Enable or disable spooling of stratustryke output to a file')
+    @argument('path', help = '\'off\' or file to enable / switch spooling to')
     def do_spool(self, args):
         if args.path.lower() == 'off':
             if self.framework.spooler != None:
@@ -1100,7 +1107,7 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Aliases: 'execute'
     # Todo: error in validate_options()
 
-    @stratustryke.core.command.command('Execute the currently selected module')
+    @command('Execute the currently selected module')
     def do_run(self, args):
         if self.framework.current_module == None:
             self.print_line('No module currently selected')
@@ -1131,9 +1138,9 @@ class InteractiveInterpreter(stratustryke.core.command.Command):
     # Action: CRUD operations upon fireprox APIs
     # Syntax: 'fireprox create <URL>', 'fireprox delete <alias>', 'fireprox clean', 'fireprox list'
     
-    @stratustryke.core.command.command('Create, list, and delete fireprox APIs (uses access keys in \'default\' CLI profile)')
-    @stratustryke.core.command.argument('action', choices=('create', 'list', 'delete', 'clean'), help = 'Fireprox management action to take')
-    @stratustryke.core.command.argument('target', nargs='?', help = 'Target URL or firprox API id (required for create & delete commands)')
+    @command('Create, list, and delete fireprox APIs (uses access keys in \'default\' CLI profile)')
+    @argument('action', choices=('create', 'list', 'delete', 'clean'), help = 'Fireprox management action to take')
+    @argument('target', nargs='?', help = 'Target URL or firprox API id (required for create & delete commands)')
 
     def do_fireprox(self, args):
         if args.action.lower() in ['create', 'delete']:

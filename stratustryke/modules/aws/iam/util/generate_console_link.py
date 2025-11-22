@@ -1,5 +1,6 @@
+
 from stratustryke.core.module.aws import AWSModule
-from stratustryke.core.credential import AWSCredential
+from stratustryke.core.credential.aws import AWSCredential
 from stratustryke.core.lib import StratustrykeException
 import requests
 import json
