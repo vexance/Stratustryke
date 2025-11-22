@@ -5,7 +5,9 @@
 
 import tldextract
 import datetime
+
 from stratustryke.core.credential.aws import AWSCredential
+
 
 class FireProx(object):
     '''Class for creation, listing, and deletion of Fireprox APIs'''

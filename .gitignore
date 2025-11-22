@@ -1,8 +1,8 @@
 # Created by venv; see https://docs.python.org/3/library/venv.html
 *__pycache__/
-bin
-include
-lib64
-lib
+/bin/
+/include/
+/lib64/
+/lib/
 pyvenv.cfg
 stratustryke/modules/custom/*

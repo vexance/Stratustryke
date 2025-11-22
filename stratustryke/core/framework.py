@@ -5,19 +5,20 @@
 import importlib
 import logging
 import logging.handlers
-import stratustryke.core.lib
 import pathlib
 import sys
-import stratustryke
+import tabulate
+import os
+
+from termcolor import colored
+
 from stratustryke.core.credstore import CredentialStoreConnector
 from stratustryke.core.module import StratustrykeModule
 from stratustryke.core.option import Options
 from stratustryke.core.fireprox import FireProx
-import stratustryke.core.modmgr
-import stratustryke.settings
-from termcolor import colored
-import tabulate
-import os
+from stratustryke.core.modmgr import ModManager
+from stratustryke import lib, settings
+
 
 class StratustrykeFramework(object):
     '''
@@ -31,15 +32,15 @@ class StratustrykeFramework(object):
 
         # stdout and install / user data dirs
         self._stdout = sys.stdout if (stdout == None) else stdout
-        self._user_data_dir = stratustryke.core.lib.home_dir()
-        self._install_dir = stratustryke.core.lib.stratustryke_dir()
+        self._user_data_dir = lib.home_dir()
+        self._install_dir = lib.stratustryke_dir()
 
         # Logging setup
         self._logger = logging.getLogger('stratustryke.framework')
         tmp_path = str(pathlib.Path(self._user_data_dir/self.__package__).absolute())
         os.makedirs(tmp_path, exist_ok=True)
 
-        raw_loglevel = stratustryke.settings.STRATUSTRYKE_LOGLEVEL
+        raw_loglevel = settings.STRATUSTRYKE_LOGLEVEL
         loglevel = logging.INFO # Default to info if not designated in settings (or invalid val in settings)
         if raw_loglevel == 'DEBUG':  loglevel = logging.DEBUG
         elif raw_loglevel == 'INFO': loglevel = logging.INFO
@@ -54,23 +55,23 @@ class StratustrykeFramework(object):
 
         # Framework options
         self._config = Options()
-        self._config.add_boolean('MASK_SENSITIVE', 'Configure masking of sensitive option values in module options display', True, stratustryke.settings.MASK_SENSITIVE_OPTIONS)
-        self._config.add_boolean('COLORED_OUTPUT', 'Enables color in console output', True, stratustryke.settings.COLORED_OUTPUT)
-        self._config.add_boolean('FORCE_VALIDATE_OPTIONS', 'Enables validation checks on module options upon running the module', True, stratustryke.settings.FORCE_VALIDATE_OPTIONS)
-        self._config.add_boolean('SPOOL_OVERWRITE', 'Enables spool file overwrite and disables default writing mode (append) for file spooling ops', True, stratustryke.settings.SPOOL_OVERWRITE)
-        self._config.add_boolean('TRUNCATE_OPTIONS', 'Enables / disables truncation of long option values to avoid line-breaks in terminal', True, stratustryke.settings.TRUNCATE_OPTIONS)
-        self._config.add_string('FIREPROX_CRED_ALIAS', 'Credential alias to use for management of fireprox APIs', True, stratustryke.settings.FIREPROX_CRED_ALIAS)
-        self._config.add_string('DEFAULT_TABLE_FORMAT', 'Default outputing format for table output', True, stratustryke.settings.DEFAULT_TABLE_FORMAT)
-        self._config.add_string('WORKSPACE', 'Workspace to filter credential objects in the stratustryke sqlite credstore', True, stratustryke.settings.DEFAULT_WORKSPACE)
+        self._config.add_boolean('MASK_SENSITIVE', 'Configure masking of sensitive option values in module options display', True, settings.MASK_SENSITIVE_OPTIONS)
+        self._config.add_boolean('COLORED_OUTPUT', 'Enables color in console output', True, settings.COLORED_OUTPUT)
+        self._config.add_boolean('FORCE_VALIDATE_OPTIONS', 'Enables validation checks on module options upon running the module', True, settings.FORCE_VALIDATE_OPTIONS)
+        self._config.add_boolean('SPOOL_OVERWRITE', 'Enables spool file overwrite and disables default writing mode (append) for file spooling ops', True, settings.SPOOL_OVERWRITE)
+        self._config.add_boolean('TRUNCATE_OPTIONS', 'Enables / disables truncation of long option values to avoid line-breaks in terminal', True, settings.TRUNCATE_OPTIONS)
+        self._config.add_string('FIREPROX_CRED_ALIAS', 'Credential alias to use for management of fireprox APIs', True, settings.FIREPROX_CRED_ALIAS)
+        self._config.add_string('DEFAULT_TABLE_FORMAT', 'Default outputing format for table output', True, settings.DEFAULT_TABLE_FORMAT)
+        self._config.add_string('WORKSPACE', 'Workspace to filter credential objects in the stratustryke sqlite credstore', True, settings.DEFAULT_WORKSPACE)
         self._config.add_string('HTTP_PROXY', 'Proxy (schema://host:port) for modules to use as an HTTP/S proxy for web traffic', False, None, '(http[s]?|socks[45][h]?)[:]\\/\\/.*[:][0-9]{1,5}')
-        self._config.add_boolean('HTTP_VERIFY_SSL', 'Enable or disable SSL/TLS verification when modules perform manual HTTP requests', True, stratustryke.settings.HTTP_VERIFY_SSL)
-        self._config.add_boolean('HTTP_STSK_HEADER', 'Enable / disable submission of X-Stratustryke-Header for custom HTTP requests', True, stratustryke.settings.HTTP_STSK_HEADER)
+        self._config.add_boolean('HTTP_VERIFY_SSL', 'Enable or disable SSL/TLS verification when modules perform manual HTTP requests', True, settings.HTTP_VERIFY_SSL)
+        self._config.add_boolean('HTTP_STSK_HEADER', 'Enable / disable submission of X-Stratustryke-Header for custom HTTP requests', True, settings.HTTP_STSK_HEADER)
 
         # Load modules into framework - get modules dir and all directories below it
         self.current_module = None
 
         search_dirs = []
-        builtin_modules_dir = (stratustryke.core.lib.stratustryke_dir()/'modules').absolute()
+        builtin_modules_dir = (lib.stratustryke_dir()/'modules').absolute()
         for directory in builtin_modules_dir.glob('**/'):
             path = str(directory)
             if not path.endswith('__pycache__'):
@@ -78,7 +79,7 @@ class StratustrykeFramework(object):
 
         self.spooler = None # Will hold the I/O handle
         self.spool_mode = None
-        self.credentials = CredentialStoreConnector(self, str(stratustryke.core.lib.sqlite_filepath()))
+        self.credentials = CredentialStoreConnector(self, str(lib.sqlite_filepath()))
         
         fp_alias = self._config.get_opt('FIREPROX_CRED_ALIAS')._value
         if fp_alias in self.credentials.keys():
@@ -88,7 +89,7 @@ class StratustrykeFramework(object):
             self.print_warning(f'Fireprox manager credential alias \'{fp_alias}\' not found!')
             self.fireprox = None
 
-        self.modules = stratustryke.core.modmgr.ModManager(self, search_dirs)
+        self.modules = ModManager(self, search_dirs)
         self._logger.info(f'Loaded {len(self.modules)} modules into the framework')
 
 
@@ -187,7 +188,7 @@ class StratustrykeFramework(object):
             instance = module.Module(self)
         except Exception as err:
             self._logger.error(f'Failed to load module: \'{mod_path}\'', exc_info=True)
-            raise stratustryke.core.lib.FrameworkRuntimeError(f'Failed to load module: \'{mod_path}\'')
+            raise lib.FrameworkRuntimeError(f'Failed to load module: \'{mod_path}\'')
 
         return instance
 
@@ -207,7 +208,7 @@ class StratustrykeFramework(object):
         # Ensure module requested for reload is already loaded
         if mod_path not in self.modules:
             self._logger.error(f'Invalid module \'{mod_path}\' requested for reload while not in framework')
-            raise stratustryke.core.lib.FrameworkRuntimeError(f'Invalid module: \'{mod_path}\' requested for reload')
+            raise lib.FrameworkRuntimeError(f'Invalid module: \'{mod_path}\' requested for reload')
 
         self._logger.info(f'Reloading \'{mod_path}\' module')
 
@@ -215,16 +216,16 @@ class StratustrykeFramework(object):
         # Ensure Module class instance has required attributes
         if not isinstance(instance, StratustrykeModule): # Modules must inherit StratustrykeModule
             self._logger.error(f'Module: \'{mod_path}\' does not inherit from stratustryke.core.module.StratustrykeModule class')
-            raise stratustryke.core.lib.FrameworkRuntimeError(f'Module: \'{mod_path}\' does not inherit from stratustryke.core.module.StratustrykeModule class')
+            raise lib.FrameworkRuntimeError(f'Module: \'{mod_path}\' does not inherit from stratustryke.core.module.StratustrykeModule class')
         if not isinstance(instance._options, stratustryke.core.option.Options): # options must be of Options class
             self._logger.error(f'Module: \'{mod_path}\' options are not of stratustryke.core.option.Options class')
-            raise stratustryke.core.lib.FrameworkRuntimeError(f'Module: \'{mod_path}\' options are not of stratustryke.core.option.Options class')
+            raise lib.FrameworkRuntimeError(f'Module: \'{mod_path}\' options are not of stratustryke.core.option.Options class')
         if not(instance._info.get('Authors', False) and instance._info.get('Details', False) and instance._info.get('References', False) and (instance.desc != False)): # Modules must specify this info
             self._logger.error(f'Module: {mod_path} does not designate necessary info - Author, Details, References')
-            raise stratustryke.core.lib.FrameworkRuntimeError(f'Module: {mod_path} does not designate necessary info - Author, Details, References')
+            raise lib.FrameworkRuntimeError(f'Module: {mod_path} does not designate necessary info - Author, Details, References')
         if not hasattr(instance, 'run'): # Modules must implement run() method
             self._logger.error(f'Module: \'{mod_path}\' does not implement run() method')
-            raise stratustryke.core.lib.FrameworkRuntimeError(f'Module: {mod_path} does not implement run() method')
+            raise lib.FrameworkRuntimeError(f'Module: {mod_path} does not implement run() method')
         
         # Set name, path, and store the instance
         instance.name = mod_path.split('/')[-1]
@@ -246,7 +247,7 @@ class StratustrykeFramework(object):
 
         # Ensure either the passed module or current module inherits StrautstrykeModule
         if not (mod_is_ss_module or current_mod_is_ss_module):
-            raise stratustryke.core.lib.FrameworkRuntimeError(f'StratustrykeFramework.run() called when nether passed module or current module inherit from stratustryke.core.module.StratustrykeModule')
+            raise lib.FrameworkRuntimeError(f'StratustrykeFramework.run() called when nether passed module or current module inherit from stratustryke.core.module.StratustrykeModule')
 
         module == self.current_module if (module == None) else module
 

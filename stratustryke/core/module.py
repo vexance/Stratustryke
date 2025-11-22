@@ -1,413 +1,416 @@
-# Author: @vexance
-# Purpose: Base class definitions for AWS, Azure, and GCP class modules
+# # Author: @vexance
+# # Purpose: Base class definitions for AWS, Azure, and GCP class modules
 
-from stratustryke.core.option import Options
-from stratustryke.settings import AWS_DEFAULT_REGION
-from stratustryke.core.lib import StratustrykeException
-import typing
-import stratustryke.core.credential
-import json
-from os import linesep
-from http.client import responses as httpresponses
-from requests import request, Response
-from pathlib import Path
-import urllib3
+# import typing
+# import stratustryke.core.credential
+# import json
+# import urllib3
 
-class StratustrykeModule(object):
+# from os import linesep
+# from http.client import responses as httpresponses
+# from requests import request, Response
+# from pathlib import Path
 
-    OPT_VERBOSE = 'VERBOSE'
+# from stratustryke.core.option import Options
+# from stratustryke.settings import AWS_DEFAULT_REGION
+# from stratustryke.lib import StratustrykeException
 
-    def __init__(self, framework) -> None:
-        self.framework = framework
-        self._info = { # set to false here to verify authors put this info in
-            'Authors': False, # list[str} Authors who wrote the module
-            'Details': False, # str detailed explanation of what the module does
-            'Description': False, # str brief (one-line) summary of what module does
-            'References': False # list[str] External references pertaining to the module
-        }
-        self._options = Options()
-        self._options.add_boolean(StratustrykeModule.OPT_VERBOSE, 'When enabled, increases verbosity of module output', False, False)
 
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+# class StratustrykeModule(object):
 
-    @property
-    def desc(self) -> str:
-        return self._info.get('Description', 'Unknown')
+#     OPT_VERBOSE = 'VERBOSE'
 
-    @property
-    def logger(self):
-        return self.framework.get_module_logger(self.name)
+#     def __init__(self, framework) -> None:
+#         self.framework = framework
+#         self._info = { # set to false here to verify authors put this info in
+#             'Authors': False, # list[str} Authors who wrote the module
+#             'Details': False, # str detailed explanation of what the module does
+#             'Description': False, # str brief (one-line) summary of what module does
+#             'References': False # list[str] External references pertaining to the module
+#         }
+#         self._options = Options()
+#         self._options.add_boolean(StratustrykeModule.OPT_VERBOSE, 'When enabled, increases verbosity of module output', False, False)
 
-    @property
-    def path(self) -> str:
-        return self.__module__.split('.', 3)[-1].replace('.', '/')
+#         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-    @property
-    def name(self) -> str:
-        return self.path.split('/')[-1]
+#     @property
+#     def desc(self) -> str:
+#         return self._info.get('Description', 'Unknown')
 
-    @property
-    def search_name(self) -> str:
-        return f'generic/{self.name}'
+#     @property
+#     def logger(self):
+#         return self.framework.get_module_logger(self.name)
+
+#     @property
+#     def path(self) -> str:
+#         return self.__module__.split('.', 3)[-1].replace('.', '/')
+
+#     @property
+#     def name(self) -> str:
+#         return self.path.split('/')[-1]
+
+#     @property
+#     def search_name(self) -> str:
+#         return f'generic/{self.name}'
     
-    @property
-    def web_proxies(self) -> dict:
-        valid, msg = self.framework._config.get_opt('HTTP_PROXY').validate()
-        if not valid:
-            raise StratustrykeException(msg)
+#     @property
+#     def web_proxies(self) -> dict:
+#         valid, msg = self.framework._config.get_opt('HTTP_PROXY').validate()
+#         if not valid:
+#             raise StratustrykeException(msg)
 
-        proxy = self.framework._config.get_val('HTTP_PROXY')
-        if proxy in ['', None]:
-            return {}
+#         proxy = self.framework._config.get_val('HTTP_PROXY')
+#         if proxy in ['', None]:
+#             return {}
         
-        return {
-            'http': proxy,
-            'https': proxy
-        }
+#         return {
+#             'http': proxy,
+#             'https': proxy
+#         }
 
 
-    def show_options(self, mask: bool = False, truncate: bool = True) -> list:
-        ''':return: list[list[str]] containing rows of column values'''
-        return self._options.show_options(mask, truncate)
+#     def show_options(self, mask: bool = False, truncate: bool = True) -> list:
+#         ''':return: list[list[str]] containing rows of column values'''
+#         return self._options.show_options(mask, truncate)
 
 
-    def validate_options(self) -> tuple:
-        '''Validate option-specific requirements.\n
-        :rtype: (bool, str | None)'''
-        # Wrapper for Options class validate_options() call; can be overriden for additional checks
-        return self._options.validate_options()
+#     def validate_options(self) -> tuple:
+#         '''Validate option-specific requirements.\n
+#         :rtype: (bool, str | None)'''
+#         # Wrapper for Options class validate_options() call; can be overriden for additional checks
+#         return self._options.validate_options()
 
 
-    def load_strings(self, file: str, is_paste: bool = False) -> list:
-        '''
-        Parse file lines from either a file (default) or pasted option value (when is_pasted = True).\n
-        :param file: Path to the file OR raw pasted option value when is_paste = True
-        :param is_paste: boolean flag indicating whether we're reading from file or parsing a string with line seperators
-        :return: list[str] | None'''
-        try:
-            if not is_paste:
-                file = Path(file)
-                with open(file, 'r') as handle:
-                    return [line.strip(f'{linesep}') for line in handle.readlines()]
+#     def load_strings(self, file: str, is_paste: bool = False) -> list:
+#         '''
+#         Parse file lines from either a file (default) or pasted option value (when is_pasted = True).\n
+#         :param file: Path to the file OR raw pasted option value when is_paste = True
+#         :param is_paste: boolean flag indicating whether we're reading from file or parsing a string with line seperators
+#         :return: list[str] | None'''
+#         try:
+#             if not is_paste:
+#                 file = Path(file)
+#                 with open(file, 'r') as handle:
+#                     return [line.strip(f'{linesep}') for line in handle.readlines()]
 
-            # Otherwise we're parsing a pasted option value which has \\n between each pasted line
-            else: return file.split('\\n')
+#             # Otherwise we're parsing a pasted option value which has \\n between each pasted line
+#             else: return file.split('\\n')
         
-        except Exception as err:
-            self.framework.print_error(f'Error reading contents of file: {file}')
-            return None
+#         except Exception as err:
+#             self.framework.print_error(f'Error reading contents of file: {file}')
+#             return None
 
 
-    def get_opt_multiline(self, opt_name: str, **kwargs) -> list:
-        '''
-        Returns list[str] containing lines from an option file/paste or an individual value\n
-        :param opt_name: (str) Option name to retrieve list value for
-        :param delimiter: (str) Character to seperate value on if 'set' command was used
-        :param unique: (bool) Flag which removes duplicate entries from the list (default: False)
-        :return: list[str] parsed option string values
-        '''
-        delim = kwargs.get('delimiter', None)
-        unique = kwargs.get('unique', False)
-        value = self.get_opt(opt_name)
+#     def get_opt_multiline(self, opt_name: str, **kwargs) -> list:
+#         '''
+#         Returns list[str] containing lines from an option file/paste or an individual value\n
+#         :param opt_name: (str) Option name to retrieve list value for
+#         :param delimiter: (str) Character to seperate value on if 'set' command was used
+#         :param unique: (bool) Flag which removes duplicate entries from the list (default: False)
+#         :return: list[str] parsed option string values
+#         '''
+#         delim = kwargs.get('delimiter', None)
+#         unique = kwargs.get('unique', False)
+#         value = self.get_opt(opt_name)
 
-        if value == None or value == '':
-            return None
+#         if value == None or value == '':
+#             return None
         
-        is_pasted = self._options.get_opt(opt_name)._pasted
-        if is_pasted:
-            parsed = self.load_strings(value, is_paste=True)
-        elif Path.exists(Path(value)):
-            parsed = self.load_strings(value, is_paste=False)
-        else:
-            if delim != None:
-                parsed = value.split(delim)
-            else: parsed = [value]
+#         is_pasted = self._options.get_opt(opt_name)._pasted
+#         if is_pasted:
+#             parsed = self.load_strings(value, is_paste=True)
+#         elif Path.exists(Path(value)):
+#             parsed = self.load_strings(value, is_paste=False)
+#         else:
+#             if delim != None:
+#                 parsed = value.split(delim)
+#             else: parsed = [value]
 
-        if unique:
-            if len(parsed) > 1:
-                # Example duplicate removal if order should be preserved
-                parsed = sorted(set(parsed), key=lambda idx: parsed.index(idx))
-                # lines = list(set(lines)) # Otherwise, more simply if order does not matter
-                parsed.remove('') # remove blank lines if necessary
+#         if unique:
+#             if len(parsed) > 1:
+#                 # Example duplicate removal if order should be preserved
+#                 parsed = sorted(set(parsed), key=lambda idx: parsed.index(idx))
+#                 # lines = list(set(lines)) # Otherwise, more simply if order does not matter
+#                 parsed.remove('') # remove blank lines if necessary
 
-        return parsed
+#         return parsed
 
 
-    def http_request(self, method: str, url: str, **kwargs) -> Response:
-        '''
-        Wraps requests.request() while enforcing framework proxy / TLS verification configs\n
-        :param method: (str) request method (e.g., GET, POST, PUT, etc)
-        :param url: (str) URL for the request
-        :param data: (str) non-json request body data
-        :param json: (str) JSON request body data
-        :param auth: (any) authentication. Support Sigv4
-        '''
-        proxies = kwargs.get('proxies', self.web_proxies)
-        verify = kwargs.get('verify', self.framework._config.get_val('HTTP_VERIFY_SSL'))
-        data = kwargs.get('data', None)
-        auth = kwargs.get('auth', None)
-        json = kwargs.get('json', None)
-        headers = kwargs.get('headers', {})
-        if self.framework._config.get_val('HTTP_STSK_HEADER'):
-            headers.update({'X-Stratustryke-Module': f'{self.search_name}'})
+#     def http_request(self, method: str, url: str, **kwargs) -> Response:
+#         '''
+#         Wraps requests.request() while enforcing framework proxy / TLS verification configs\n
+#         :param method: (str) request method (e.g., GET, POST, PUT, etc)
+#         :param url: (str) URL for the request
+#         :param data: (str) non-json request body data
+#         :param json: (str) JSON request body data
+#         :param auth: (any) authentication. Support Sigv4
+#         '''
+#         proxies = kwargs.get('proxies', self.web_proxies)
+#         verify = kwargs.get('verify', self.framework._config.get_val('HTTP_VERIFY_SSL'))
+#         data = kwargs.get('data', None)
+#         auth = kwargs.get('auth', None)
+#         json = kwargs.get('json', None)
+#         headers = kwargs.get('headers', {})
+#         if self.framework._config.get_val('HTTP_STSK_HEADER'):
+#             headers.update({'X-Stratustryke-Module': f'{self.search_name}'})
 
-        if method == 'GET': json, data = None, None # Ensure GET requests don't contain request body
-        try:
-            res = request(method, url, verify=verify, proxies=proxies, data=data, headers=headers, auth=auth, json=json)
+#         if method == 'GET': json, data = None, None # Ensure GET requests don't contain request body
+#         try:
+#             res = request(method, url, verify=verify, proxies=proxies, data=data, headers=headers, auth=auth, json=json)
             
-            # res = request(method, url, verify=verify, proxies=proxies, params=params, data=data, headers=headers, cookies=cookies, auth=auth,
-            #               files=files, timeout=timeout, allow_redirects=allow_redirects, hooks=hooks, stream=stream, cert=cert, json=json)
-        except Exception as err:
-            self.framework.print_error(f'Exception thrown ({type(err).__name__}) during HTTP/S request: {err}')
-            self.framework._logger.error(f'Exception thrown ({type(err).__name__}) during HTTP/S request: {err}')
-            return None
+#             # res = request(method, url, verify=verify, proxies=proxies, params=params, data=data, headers=headers, cookies=cookies, auth=auth,
+#             #               files=files, timeout=timeout, allow_redirects=allow_redirects, hooks=hooks, stream=stream, cert=cert, json=json)
+#         except Exception as err:
+#             self.framework.print_error(f'Exception thrown ({type(err).__name__}) during HTTP/S request: {err}')
+#             self.framework._logger.error(f'Exception thrown ({type(err).__name__}) during HTTP/S request: {err}')
+#             return None
         
-        return res
+#         return res
 
 
-    def http_record(self, response: Response, outfile: str = None) -> list:
-        '''Returns a list[str] containing raw HTTP request / response content. If ourfile is specified, will (over)write the lines to the file
-        :param response: requests.Response object from a HTTP request
-        :param outfile: string path to an output file to create. Overwrites if already existing.
-        :return: list[str] containing raw HTTP request / response content'''
-        lines = []
-        request = response.request
+#     def http_record(self, response: Response, outfile: str = None) -> list:
+#         '''Returns a list[str] containing raw HTTP request / response content. If ourfile is specified, will (over)write the lines to the file
+#         :param response: requests.Response object from a HTTP request
+#         :param outfile: string path to an output file to create. Overwrites if already existing.
+#         :return: list[str] containing raw HTTP request / response content'''
+#         lines = []
+#         request = response.request
         
-        # Get raw request content
-        url_path = request.url.split('/')[3:] # strip http: / / host /
-        lines.append(f'{request.method} /{"".join(url_path)} HTTP/1.1{linesep}') # requests supports HTTP/1.1
-        lines.extend([f'{key}: {request.headers[key]}{linesep}' for key in request.headers])
-        lines.append(f'{linesep}')
+#         # Get raw request content
+#         url_path = request.url.split('/')[3:] # strip http: / / host /
+#         lines.append(f'{request.method} /{"".join(url_path)} HTTP/1.1{linesep}') # requests supports HTTP/1.1
+#         lines.extend([f'{key}: {request.headers[key]}{linesep}' for key in request.headers])
+#         lines.append(f'{linesep}')
 
-        if request.body == None: lines.append(f'{linesep}')
-        else: 
-            if isinstance(request.body, bytes):
-                request.body = request.body.decode()
-            lines.append(f'{request.body}{linesep}')
-        lines.append(f'{linesep}{linesep}')
+#         if request.body == None: lines.append(f'{linesep}')
+#         else: 
+#             if isinstance(request.body, bytes):
+#                 request.body = request.body.decode()
+#             lines.append(f'{request.body}{linesep}')
+#         lines.append(f'{linesep}{linesep}')
 
-        # Get raw response content
-        status_description = httpresponses.get(response.status_code, 'UNKNOWN_STATUS_CODE')
-        lines.append(f'HTTP/1.1 {response.status_code} {status_description}{linesep}')
-        lines.extend([f'{key}: {response.headers[key]}{linesep}' for key in response.headers])
-        lines.append(f'{linesep}')
-        if response.text == None: lines.append(f'{linesep}')
-        else: lines.append(f'{response.text}{linesep}')
-        lines.append(f'{linesep}{linesep}')
+#         # Get raw response content
+#         status_description = httpresponses.get(response.status_code, 'UNKNOWN_STATUS_CODE')
+#         lines.append(f'HTTP/1.1 {response.status_code} {status_description}{linesep}')
+#         lines.extend([f'{key}: {response.headers[key]}{linesep}' for key in response.headers])
+#         lines.append(f'{linesep}')
+#         if response.text == None: lines.append(f'{linesep}')
+#         else: lines.append(f'{response.text}{linesep}')
+#         lines.append(f'{linesep}{linesep}')
 
-        if outfile != None:
-            self.framework._logger.info(f'Recording HTTP request/response to {outfile}')
-            with open(outfile, 'w') as file:
-                file.writelines(lines)
+#         if outfile != None:
+#             self.framework._logger.info(f'Recording HTTP request/response to {outfile}')
+#             with open(outfile, 'w') as file:
+#                 file.writelines(lines)
 
-        return lines
+#         return lines
 
 
-    def show_info(self) -> list:
-        '''Return module information and technical details. Should not be overriden in child classes\n
-        :rtype: list<str> containing module information'''
-        output = []
-        output.append(f'  Module Name: {self.search_name}')
-        output.append(f'  Author(s): {", ".join(self._info.get("Authors", []))}')
+#     def show_info(self) -> list:
+#         '''Return module information and technical details. Should not be overriden in child classes\n
+#         :rtype: list<str> containing module information'''
+#         output = []
+#         output.append(f'  Module Name: {self.search_name}')
+#         output.append(f'  Author(s): {", ".join(self._info.get("Authors", []))}')
         
-        output.append(f'  References:')
-        for ref in self._info.get('References', []):
-            output.append(f'  -  {ref}')
+#         output.append(f'  References:')
+#         for ref in self._info.get('References', []):
+#             output.append(f'  -  {ref}')
         
-        output.append(f'  Description: {self.desc}')
-        output.append(f'  Details:')
-        output.append(f'    {self._info.get("Details", "UNKNOWN")}')
+#         output.append(f'  Description: {self.desc}')
+#         output.append(f'  Details:')
+#         output.append(f'    {self._info.get("Details", "UNKNOWN")}')
 
-        return output
-
-
-    def get_opt(self, name: str) -> typing.Any:
-        '''Return the current value for the option; Pass to Options.get_val() NOTE: returns value, not the option object'''
-        return self._options.get_val(name)
+#         return output
 
 
-    def set_opt(self, name: str, val: typing.Any) -> None:
-        '''Sets the value for the option; Pass to Options.set_opt()'''
-        self._options.set_opt(name, val)
+#     def get_opt(self, name: str) -> typing.Any:
+#         '''Return the current value for the option; Pass to Options.get_val() NOTE: returns value, not the option object'''
+#         return self._options.get_val(name)
 
 
-    def unset_opt(self, name: str) -> None:
-        '''Sets value for the option to None; Pass to Options.unset_opt()'''
-        self._options.unset_opt(name)
+#     def set_opt(self, name: str, val: typing.Any) -> None:
+#         '''Sets the value for the option; Pass to Options.set_opt()'''
+#         self._options.set_opt(name, val)
 
 
-    def reset_opt(self, name: str) -> None:
-        '''Reset value to default for the option; Pass to Options.reset_opt()'''
-        self._options.reset_opt(name)
+#     def unset_opt(self, name: str) -> None:
+#         '''Sets value for the option to None; Pass to Options.unset_opt()'''
+#         self._options.unset_opt(name)
 
 
-    #Must be implemented by inheriting classes
-    #def run(self) -> None:
-    #   '''Execute current module. This serves as the Module\'s main() function. This will automatically trigger option validation when set in the stratustryke config.'''
-    #   pass
+#     def reset_opt(self, name: str) -> None:
+#         '''Reset value to default for the option; Pass to Options.reset_opt()'''
+#         self._options.reset_opt(name)
 
 
-# Modules to interact with AWS cloud resources / services
-class AWSModule(StratustrykeModule):
+#     #Must be implemented by inheriting classes
+#     #def run(self) -> None:
+#     #   '''Execute current module. This serves as the Module\'s main() function. This will automatically trigger option validation when set in the stratustryke config.'''
+#     #   pass
 
 
-    OPT_ACCESS_KEY = 'AUTH_ACCESS_KEY_ID'
-    OPT_SECRET_KEY = 'AUTH_SECRET_KEY'
-    OPT_SESSION_TOKEN = 'AUTH_SESSION_TOKEN'
-    OPT_AWS_REGION = 'AWS_REGION'
-
-    def __init__(self, framework) -> None:
-        super().__init__(framework)
-        self._options.add_string(AWSModule.OPT_ACCESS_KEY, 'AWS access key id for authentication', True, regex = '(?:A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}')
-        self._options.add_string(AWSModule.OPT_SECRET_KEY, 'AWS secret key to use for authentication', True, regex='[0-9a-zA-Z\\/+]{40}', sensitive=True)
-        self._options.add_string(AWSModule.OPT_SESSION_TOKEN, 'AWS session token for temporary credential authentication', regex='[0-9a-zA-Z\\/+]{364}', sensitive=True)
-        self._options.add_string(AWSModule.OPT_AWS_REGION, 'AWS region(s) to specify within calls', False, AWS_DEFAULT_REGION)
-        self._cred = None
+# # Modules to interact with AWS cloud resources / services
+# class AWSModule(StratustrykeModule):
 
 
-    @property
-    def search_name(self):
-        return f'aws/{self.name}'
+#     OPT_ACCESS_KEY = 'AUTH_ACCESS_KEY_ID'
+#     OPT_SECRET_KEY = 'AUTH_SECRET_KEY'
+#     OPT_SESSION_TOKEN = 'AUTH_SESSION_TOKEN'
+#     OPT_AWS_REGION = 'AWS_REGION'
+
+#     def __init__(self, framework) -> None:
+#         super().__init__(framework)
+#         self._options.add_string(AWSModule.OPT_ACCESS_KEY, 'AWS access key id for authentication', True, regex = '(?:A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}')
+#         self._options.add_string(AWSModule.OPT_SECRET_KEY, 'AWS secret key to use for authentication', True, regex='[0-9a-zA-Z\\/+]{40}', sensitive=True)
+#         self._options.add_string(AWSModule.OPT_SESSION_TOKEN, 'AWS session token for temporary credential authentication', regex='[0-9a-zA-Z\\/+]{364}', sensitive=True)
+#         self._options.add_string(AWSModule.OPT_AWS_REGION, 'AWS region(s) to specify within calls', False, AWS_DEFAULT_REGION)
+#         self._cred = None
+
+
+#     @property
+#     def search_name(self):
+#         return f'aws/{self.name}'
     
 
-    def validate_options(self) -> tuple:
-        # Validate required params and regex matches
-        valid, msg = super().validate_options()
-        if not valid:
-            return (valid, msg)
+#     def validate_options(self) -> tuple:
+#         # Validate required params and regex matches
+#         valid, msg = super().validate_options()
+#         if not valid:
+#             return (valid, msg)
 
-        # Temporary creds (from STS service 'ASIA...') require a session token
-        key_prefix = self.get_opt(AWSModule.OPT_ACCESS_KEY)[0:3]
-        token = self.get_opt(AWSModule.OPT_SESSION_TOKEN)
-        if ((token == '' or token == None)  and key_prefix in ['ASIA']):
-            return (False, f'Session token required for temporary STS credential \'{self.auth_access_key_id.value}\'')
+#         # Temporary creds (from STS service 'ASIA...') require a session token
+#         key_prefix = self.get_opt(AWSModule.OPT_ACCESS_KEY)[0:3]
+#         token = self.get_opt(AWSModule.OPT_SESSION_TOKEN)
+#         if ((token == '' or token == None)  and key_prefix in ['ASIA']):
+#             return (False, f'Session token required for temporary STS credential \'{self.auth_access_key_id.value}\'')
 
-        # Looks good
-        return (True, None)
+#         # Looks good
+#         return (True, None)
 
 
-    def get_cred(self, region: str = None):
-        access_key = self.get_opt(AWSModule.OPT_ACCESS_KEY)
-        secret = self.get_opt(AWSModule.OPT_SECRET_KEY)
-        token = self.get_opt(AWSModule.OPT_SESSION_TOKEN)
-        cred_region = region if (region != None) else self.get_opt(AWSModule.OPT_AWS_REGION)
+#     def get_cred(self, region: str = None):
+#         access_key = self.get_opt(AWSModule.OPT_ACCESS_KEY)
+#         secret = self.get_opt(AWSModule.OPT_SECRET_KEY)
+#         token = self.get_opt(AWSModule.OPT_SESSION_TOKEN)
+#         cred_region = region if (region != None) else self.get_opt(AWSModule.OPT_AWS_REGION)
 
-        return stratustryke.core.credential.AWSCredential(f'{self.name}', access_key=access_key, secret_key=secret, session_token=token, default_region=cred_region)
+#         return stratustryke.core.credential.AWSCredential(f'{self.name}', access_key=access_key, secret_key=secret, session_token=token, default_region=cred_region)
         
 
-# Microsoft365 Modules to interact with M365 or Entra
-class M365Module(StratustrykeModule):
-    def __init__(self, framework) -> None:
-        super().__init__(framework)
-        self._options.add_string('AUTH_TOKEN', 'Pre-existing access token for Microsoft Graph; overrides other AUTH_* options', False, sensitive=True)
-        self._options.add_string('AUTH_PRINCIPAL', 'Entra service principal id, email, or managed identity', False)
-        self._options.add_string('AUTH_SECRET', 'Authentication secret (e.g, client secret / password)', False, sensitive=True)
-        self._options.add_string('AUTH_TENANT', 'Azure tenant / directory identifer; required if AUTH_TOKEN not set', False, regex='^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
-        self._cred = None
+# # Microsoft365 Modules to interact with M365 or Entra
+# class M365Module(StratustrykeModule):
+#     def __init__(self, framework) -> None:
+#         super().__init__(framework)
+#         self._options.add_string('AUTH_TOKEN', 'Pre-existing access token for Microsoft Graph; overrides other AUTH_* options', False, sensitive=True)
+#         self._options.add_string('AUTH_PRINCIPAL', 'Entra service principal id, email, or managed identity', False)
+#         self._options.add_string('AUTH_SECRET', 'Authentication secret (e.g, client secret / password)', False, sensitive=True)
+#         self._options.add_string('AUTH_TENANT', 'Azure tenant / directory identifer; required if AUTH_TOKEN not set', False, regex='^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+#         self._cred = None
 
 
-    @property
-    def search_name(self):
-        return f'm365/{self.name}'
+#     @property
+#     def search_name(self):
+#         return f'm365/{self.name}'
     
 
-    def get_cred(self,):
-        access_token = self.get_opt('AUTH_TOKEN')
-        principal = self.get_opt('AUTH_PRINCIPAL')
-        secret = self.get_opt('AUTH_SECRET')
-        tenant = self.get_opt('AUTH_TENANT')
+#     def get_cred(self,):
+#         access_token = self.get_opt('AUTH_TOKEN')
+#         principal = self.get_opt('AUTH_PRINCIPAL')
+#         secret = self.get_opt('AUTH_SECRET')
+#         tenant = self.get_opt('AUTH_TENANT')
 
-        return stratustryke.core.credential.MicrosoftCredential(f'{self.name}', principal=principal, secret=secret, tenant=tenant, access_token=access_token)
-
-
-# Microsft modules to interact with azure subscriptions
-class AzureModule(M365Module):
-    def __init__(self, framework) -> None:
-        super().__init__(framework)
-        self._options.add_string('AZ_SUBSCRIPTION', 'Target subscription id(s) (default: all accessible to principal) [S/F/P]', False)
-        self.auth_token = None
+#         return stratustryke.core.credential.MicrosoftCredential(f'{self.name}', principal=principal, secret=secret, tenant=tenant, access_token=access_token)
 
 
-    @property
-    def search_name(self):
-        return f'azure/{self.name}'
+# # Microsft modules to interact with azure subscriptions
+# class AzureModule(M365Module):
+#     def __init__(self, framework) -> None:
+#         super().__init__(framework)
+#         self._options.add_string('AZ_SUBSCRIPTION', 'Target subscription id(s) (default: all accessible to principal) [S/F/P]', False)
+#         self.auth_token = None
+
+
+#     @property
+#     def search_name(self):
+#         return f'azure/{self.name}'
     
 
-    def get_opt_az_subscription(self) -> list:
-        '''Module built-in for common way to get subscription ids'''
-        subscriptions = self.get_opt_multiline('AZ_SUBSCRIPTION')
+#     def get_opt_az_subscription(self) -> list:
+#         '''Module built-in for common way to get subscription ids'''
+#         subscriptions = self.get_opt_multiline('AZ_SUBSCRIPTION')
 
 
-        if subscriptions == [] or subscriptions == None:
-            subscriptions = []
-            subs = self.list_subscriptions()
-            for tenant, sub in subs:
-                self.framework.print_status(f'Found accessible subscription {sub}')
-                subscriptions.append(sub)
+#         if subscriptions == [] or subscriptions == None:
+#             subscriptions = []
+#             subs = self.list_subscriptions()
+#             for tenant, sub in subs:
+#                 self.framework.print_status(f'Found accessible subscription {sub}')
+#                 subscriptions.append(sub)
         
-        if subscriptions == []: self.framework.print_warning('No subscriptions found')
-        return subscriptions
+#         if subscriptions == []: self.framework.print_warning('No subscriptions found')
+#         return subscriptions
 
 
-    def list_tenants(self) -> list:
-        '''List tenants acessible to the logged on user. Returns list<tuple(tenant_id, domain)>'''
-        ret = []
-        headers = {'Authorization': f'Bearer {self.auth_token}'}
-        endpoint = 'https://management.azure.com/tenants?api-version=2022-12-01'
+#     def list_tenants(self) -> list:
+#         '''List tenants acessible to the logged on user. Returns list<tuple(tenant_id, domain)>'''
+#         ret = []
+#         headers = {'Authorization': f'Bearer {self.auth_token}'}
+#         endpoint = 'https://management.azure.com/tenants?api-version=2022-12-01'
 
-        res = self.http_request('GET', endpoint, headers=headers)
-        tenants = json.loads(res.text).get('value', [])
+#         res = self.http_request('GET', endpoint, headers=headers)
+#         tenants = json.loads(res.text).get('value', [])
 
-        for entry in tenants:
-            tenant_id = entry.get('tenantId', None)
-            domain = entry.get('defaultDomain', None)
+#         for entry in tenants:
+#             tenant_id = entry.get('tenantId', None)
+#             domain = entry.get('defaultDomain', None)
 
-            if all([tenant_id, domain]): ret.append((tenant_id, domain))
+#             if all([tenant_id, domain]): ret.append((tenant_id, domain))
 
-        return ret
+#         return ret
     
 
-    def list_subscriptions(self) -> list:
-        '''List subscriptions accessible to the logged on user. Returns list<tuple(tenant_id, subscription_id)>'''
-        ret = []
-        headers = {'Authorization': f'Bearer {self.auth_token}'}
-        endpoint = 'https://management.azure.com/subscriptions?api-version=2022-12-01'
+#     def list_subscriptions(self) -> list:
+#         '''List subscriptions accessible to the logged on user. Returns list<tuple(tenant_id, subscription_id)>'''
+#         ret = []
+#         headers = {'Authorization': f'Bearer {self.auth_token}'}
+#         endpoint = 'https://management.azure.com/subscriptions?api-version=2022-12-01'
 
-        res = self.http_request('GET', endpoint, headers=headers)
-        if res.status_code != 200:
-            self.framework.print_error(f'Error listing subscriptions: {res.text}')
-            return []
+#         res = self.http_request('GET', endpoint, headers=headers)
+#         if res.status_code != 200:
+#             self.framework.print_error(f'Error listing subscriptions: {res.text}')
+#             return []
         
-        subscriptions = json.loads(res.text).get('value', [])
+#         subscriptions = json.loads(res.text).get('value', [])
 
-        for entry in subscriptions:
-            tenant_id = entry.get('tenantId', None)
-            sub_id = entry.get('subscriptionId', None)
+#         for entry in subscriptions:
+#             tenant_id = entry.get('tenantId', None)
+#             sub_id = entry.get('subscriptionId', None)
 
-            module_tenant = self.get_opt('AUTH_TENANT')
-            if module_tenant == None or module_tenant == tenant_id:
-                if all([tenant_id, sub_id]): ret.append((tenant_id, sub_id))
-            else:
-                self.logger.debug(f'Skipping listing of subscription {sub_id} as it is not in the auth tenant')
+#             module_tenant = self.get_opt('AUTH_TENANT')
+#             if module_tenant == None or module_tenant == tenant_id:
+#                 if all([tenant_id, sub_id]): ret.append((tenant_id, sub_id))
+#             else:
+#                 self.logger.debug(f'Skipping listing of subscription {sub_id} as it is not in the auth tenant')
 
-        return ret
+#         return ret
     
 
-    def list_resource_groups(self, subscription: str) -> list:
-        '''Returns the id for resource groups within the target subscription'''
+#     def list_resource_groups(self, subscription: str) -> list:
+#         '''Returns the id for resource groups within the target subscription'''
 
-        headers = {'Authorization': f'Bearer {self.auth_token}'}
-        endpoint = f'https://management.azure.com/subscriptions/{subscription}/resourcegroups?api-version=2022-09-01'
+#         headers = {'Authorization': f'Bearer {self.auth_token}'}
+#         endpoint = f'https://management.azure.com/subscriptions/{subscription}/resourcegroups?api-version=2022-09-01'
 
-        res = self.http_request('GET', endpoint, headers=headers)
-        resource_groups = json.loads(res.text).get('value', [])
+#         res = self.http_request('GET', endpoint, headers=headers)
+#         resource_groups = json.loads(res.text).get('value', [])
 
-        return [g.get('id', None) for g in resource_groups]
+#         return [g.get('id', None) for g in resource_groups]
 
     
         
 
-# Todo
-class GCPModule(StratustrykeModule):
-    def __init__(self) -> None:
-        super().__init__()
+# # Todo
+# class GCPModule(StratustrykeModule):
+#     def __init__(self) -> None:
+#         super().__init__()

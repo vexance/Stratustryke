@@ -1,11 +1,10 @@
 # Author: @vexance
 # Purpose: Microsoft365 Modules to interact with M365 or Entra
 
-from stratustryke.core.module.m365 import MicrosoftModule
-import json
+from stratustryke.core.module.microsoft import MicrosoftModule
 
 
-AZ_MGMT_URL='https://management.azure.com'
+AZ_MGMT_REST_URL='https://management.azure.com'
 
 
 # Microsft modules to interact with azure subscriptions
@@ -24,58 +23,144 @@ class AzureModule(MicrosoftModule):
         return f'azure/{self.name}'
     
 
-    def get_opt_az_subscription(self) -> list:
+    def get_subscriptions(self) -> list:
         '''Module built-in for common way to get subscription ids'''
         subscriptions = self.get_opt_multiline(AzureModule.OPT_AZ_SUBCRIPTION)
 
-
         if subscriptions == [] or subscriptions == None:
-            subscriptions = []
-            subs = self.list_subscriptions()
-            for tenant, sub in subs:
-                self.framework.print_status(f'Found accessible subscription {sub}')
+            subscriptions = [] # make sure it is a list if it is in fact NoneType
+            for tenant, sub in self.list_subscriptions():
+                self.framework.print_status(f'Found subscription {sub}')
                 subscriptions.append(sub)
         
-        if subscriptions == []: self.framework.print_warning('No subscriptions found')
+        if len(subscriptions) < 1: self.framework.print_warning('No subscriptions found')
         return subscriptions
+    
+
+    def az_rest_get(self, path: str, version: str, headers: dict = {}) -> tuple[dict | str, int]:
+        '''
+        Utility function to call azure management REST APIs via the GET method
+        :param path: REST API Path
+        :param version: api-version query string value
+        :param headers: Additional headers not including Authorization token
+        :return: tuple[dict|str response, response status code]
+        '''
+
+        # Build endpoint URL; basic check for query string
+        if not path.startswith('/'): path = f'/{path}'
+        query_char = '?' if '?' not in path else '&' 
+        endpoint = f'{AZ_MGMT_REST_URL}{path}{query_char}api-version={version}'
+
+
+        # Determine request headers
+        request_headers = {'Authorization': f'Bearer {self.auth_token}'}
+        request_headers = request_headers | headers # merge the two dicts; explict auth headers will overwrite default
+
+        try:
+            res = self.http_request('GET', endpoint, headers=request_headers)
+
+            try:
+                res_body = res.json()
+            except Exception as err:
+                res_body = str(res.text)
+
+            return res_body, res.status_code
+        
+        except Exception as err:
+            error = res.content if res.content else str(err)
+            status = res.status_code if res.status_code else -1
+            return error, status
+
+
+    def az_rest_request(self, method: str, path: str, version: str, headers: dict = {}, body = str|dict) -> tuple[dict | str, int]:
+        '''
+        Utility function to call azure management REST APIs via the GET method
+        :param method: POST, PUT, DELETE, etc.
+        :param path: REST API Path
+        :param version: api-version query string value
+        :param headers: Additional headers not including Authorization token
+        :param body: string or dict(JSON) request body
+        :return: tuple[dict|str response, response status code]
+        '''
+
+        # Build endpoint URL; basic check for query string
+        if not path.startswith('/'): path = f'/{path}'
+        query_char = '?' if '?' not in path else '&' 
+        endpoint = f'{AZ_MGMT_REST_URL}{path}{query_char}api-version={version}'
+
+
+        # Determine request headers
+        request_headers = {'Authorization': f'Bearer {self.auth_token}'}
+        request_headers = request_headers | headers # merge the two dicts; explict auth headers will overwrite default
+
+
+        # Determine request body; if for some reason its bytes, we'll cast to string
+        if isinstance(body, bytes):
+            body = bytes.decode()
+        if isinstance(body, str):
+            req_data = body
+            req_json = None
+        elif isinstance(body, dict):
+            req_data = None
+            req_json = body
+        else:
+            msg = f'Unsupported request body ({type(body)}) is not a string or dictionary'
+            self.print_error(msg)
+            if self.verbose: self.print_error(f'Unsupported body contents: {body}')
+            return msg, -1
+
+        try:
+            res = self.http_request(method, endpoint, headers=request_headers, data = req_data, json = req_json)
+
+            try:
+                res_body = res.json()
+            except Exception as err:
+                res_body = str(res.text)
+
+            return res_body, res.status_code
+        
+        except Exception as err:
+            error = res.content if res.content else str(err)
+            status = res.status_code if res.status_code else -1
+            return error, status
 
 
     def list_tenants(self) -> list:
         '''List tenants acessible to the logged on user. Returns list<tuple(tenant_id, domain)>'''
+        body, status = self.az_rest_get('/tenants', '2022-12-01')
+
+        if status != 200:
+            self.print_failure(f'Failed to list tenants')
+            if self.verbose:
+                self.print_failure(f'[Status {status}] {body}')
+            return []
+
         ret = []
-        headers = {'Authorization': f'Bearer {self.auth_token}'}
-        endpoint = 'https://management.azure.com/tenants?api-version=2022-12-01'
-
-        res = self.http_request('GET', endpoint, headers=headers)
-        tenants = json.loads(res.text).get('value', [])
-
-        for entry in tenants:
+        for entry in body:
             tenant_id = entry.get('tenantId', None)
             domain = entry.get('defaultDomain', None)
 
             if all([tenant_id, domain]): ret.append((tenant_id, domain))
-
+            
         return ret
     
 
     def list_subscriptions(self) -> list:
         '''List subscriptions accessible to the logged on user. Returns list<tuple(tenant_id, subscription_id)>'''
-        ret = []
-        headers = {'Authorization': f'Bearer {self.auth_token}'}
-        endpoint = 'https://management.azure.com/subscriptions?api-version=2022-12-01'
+        body, status = self.az_rest_get('/subscriptions', '2022-12-01')
 
-        res = self.http_request('GET', endpoint, headers=headers)
-        if res.status_code != 200:
-            self.framework.print_error(f'Error listing subscriptions: {res.text}')
+        if status != 200:
+            self.framework.print_failure(f'Failed to list subscriptions')
+            if self.verbose:
+                self.print_failure(f'[Status {status}] {body}')
             return []
         
-        subscriptions = json.loads(res.text).get('value', [])
-
-        for entry in subscriptions:
+        ret = []
+        for entry in body:
             tenant_id = entry.get('tenantId', None)
             sub_id = entry.get('subscriptionId', None)
 
-            module_tenant = self.get_opt(M365Module.OPT_AUTH_TENANT)
+            module_tenant = self.get_opt(MicrosoftModule.OPT_AUTH_TENANT)
             if module_tenant == None or module_tenant == tenant_id:
                 if all([tenant_id, sub_id]): ret.append((tenant_id, sub_id))
             else:
@@ -86,14 +171,15 @@ class AzureModule(MicrosoftModule):
 
     def list_resource_groups(self, subscription: str) -> list:
         '''Returns the id for resource groups within the target subscription'''
+        body, status = self.az_rest_get(f'/subscriptions/{subscription}/resourcegroups', '2022-09-01')
 
-        headers = {'Authorization': f'Bearer {self.auth_token}'}
-        endpoint = f'https://management.azure.com/subscriptions/{subscription}/resourcegroups?api-version=2022-09-01'
+        if status != 200:
+            self.print_failure(f'Failed to list resource groups in subscription {subscription}')
+            if self.verbose:
+                self.print_failure(f'[Status {status}] {body}')
+            return []
 
-        res = self.http_request('GET', endpoint, headers=headers)
-        resource_groups = json.loads(res.text).get('value', [])
-
-        return [g.get('id', None) for g in resource_groups]
+        return [g.get('id', None) for g in body]
 
     
-        
+    

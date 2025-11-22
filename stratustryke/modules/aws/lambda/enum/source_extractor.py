@@ -1,6 +1,6 @@
 from stratustryke.core.module.aws import AWSModule
 from pathlib import Path
-from stratustryke.core.lib import StratustrykeException, module_data_dir
+from stratustryke.lib import module_data_dir
 import requests
 import urllib3
 

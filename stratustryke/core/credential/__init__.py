@@ -3,14 +3,11 @@ from ast import literal_eval
 
 from stratustryke.settings import DEFAULT_WORKSPACE
 
-AWS_ROLE_ARN_REGEX = '^arn:aws:iam::[0-9]{12}:role/.*$'
-AZ_CLI_CLIENT_ID = '04b07795-8ddb-461a-bbee-02f9e1bf7b46'
-AZ_MGMT_TOKEN_SCOPE = 'https://management.azure.com/.default'
-M365_GRAPH_TOKEN_SCOPE = 'https://graph.microsoft.com/.default'
-UUID_LOWERCASE_REGEX = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-
 
 class Credential:
+
+    CREDENTIAL_TYPE = 'Generic'
+
     def __init__(self, alias: str, workspace: str = DEFAULT_WORKSPACE, verfied: bool = False, from_dict: str = None):
         if from_dict != None:
             from_dict = literal_eval(from_dict)
@@ -55,6 +52,9 @@ class GenericCredential(Credential):
 
 
 class APICredential(Credential):
+
+    CREDENTIAL_TYPE = 'API'
+
     def __init__(self, alias: str, workspace: str = DEFAULT_WORKSPACE, verfied: bool = False, auth_type: str = None, secret: str = None, endpoint: str = None, from_dict: dict = None):
         if from_dict != None:
             return super().__init__(alias, from_dict=from_dict)

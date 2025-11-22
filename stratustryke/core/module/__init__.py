@@ -1,21 +1,26 @@
 # Author: @vexance
 # Purpose: Base class definitions for AWS, Azure, and GCP class modules
 
-from stratustryke.core.option import Options
-from stratustryke.core.lib import StratustrykeException
+
 import typing
+import urllib3
+
 from os import linesep
 from http.client import responses as httpresponses
 from requests import request, Response
 from pathlib import Path
-import urllib3
+
+from stratustryke.core.option import Options
+from stratustryke.core.framework import StratustrykeFramework
+from stratustryke.lib import StratustrykeException
+
 
 class StratustrykeModule(object):
 
     OPT_VERBOSE = 'VERBOSE'
 
-    def __init__(self, framework) -> None:
-        self.framework = framework
+    def __init__(self, framework: StratustrykeFramework) -> None:
+        self.framework: StratustrykeFramework = framework
         self._info = { # set to false here to verify authors put this info in
             'Authors': False, # list[str} Authors who wrote the module
             'Details': False, # str detailed explanation of what the module does

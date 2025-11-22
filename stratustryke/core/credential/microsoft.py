@@ -5,18 +5,19 @@ from re import match as regex_match
 from ast import literal_eval
 
 from stratustryke.core.credential import CloudCredential
-from stratustryke.core.lib import StratustrykeException
 from stratustryke.settings import DEFAULT_WORKSPACE
+from stratustryke.lib import StratustrykeException
+from stratustryke.lib.regex import UUID_LOWERCASE_REGEX
 
 
-AWS_ROLE_ARN_REGEX = '^arn:aws:iam::[0-9]{12}:role/.*$'
 AZ_CLI_CLIENT_ID = '04b07795-8ddb-461a-bbee-02f9e1bf7b46'
 AZ_MGMT_TOKEN_SCOPE = 'https://management.azure.com/.default'
 M365_GRAPH_TOKEN_SCOPE = 'https://graph.microsoft.com/.default'
-UUID_LOWERCASE_REGEX = '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
 
 
 class MicrosoftCredential(CloudCredential):
+
+    CREDENTIAL_TYPE = 'MSFT'
 
     # For AzureCredential, the account_id will indicate the subscription id
     def __init__(self, alias: str, workspace: str = DEFAULT_WORKSPACE, verified: bool = False, 

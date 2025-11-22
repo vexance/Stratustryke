@@ -2,7 +2,7 @@
 # Purpose: Microsoft365 Modules to interact with M365 or Entra
 
 from stratustryke.core.module import StratustrykeModule
-import stratustryke.core.credential
+from stratustryke.core.credential.microsoft import MicrosoftCredential
 
 
 class MicrosoftModule(StratustrykeModule):
@@ -32,5 +32,5 @@ class MicrosoftModule(StratustrykeModule):
         secret = self.get_opt(MicrosoftModule.OPT_AUTH_SECRET)
         tenant = self.get_opt(MicrosoftModule.OPT_AUTH_TENANT)
 
-        return stratustryke.core.credential.MicrosoftCredential(self.name, principal=principal, secret=secret, tenant=tenant, access_token=access_token)
+        return MicrosoftCredential(self.name, principal=principal, secret=secret, tenant=tenant, access_token=access_token)
 

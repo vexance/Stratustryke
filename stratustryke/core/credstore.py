@@ -8,6 +8,9 @@ from pathlib import Path
 from stratustryke.core.credential import Credential, CloudCredential, GenericCredential, APICredential
 from stratustryke.core.credential.aws import AWSCredential
 from stratustryke.core.credential.microsoft import MicrosoftCredential
+from stratustryke.core.credential.gcp import GCPCredential
+from stratustryke.core.module.aws import AWSModule
+from stratustryke.core.module.microsoft import MicrosoftModule
 
 
 class CredentialStoreConnector(collections.abc.Mapping):
@@ -91,23 +94,23 @@ class CredentialStoreConnector(collections.abc.Mapping):
         cred_type = self.get_cred_type(cred)
         opts = module._options
         
-        if cred_type == 'Generic':
+        if cred_type == Credential.CREDENTIAL_TYPE:
             pass
         
-        elif cred_type == 'API':
+        elif cred_type == APICredential.CREDENTIAL_TYPE:
             pass
 
-        elif cred_type == 'AWS':
-            opts.set_opt('AUTH_ACCESS_KEY_ID', cred._access_key_id)
-            opts.set_opt('AUTH_SECRET_KEY', cred._secret_key)
-            opts.set_opt('AUTH_SESSION_TOKEN', cred._session_token)
-            opts.set_opt('AWS_REGION', cred._default_region)
+        elif cred_type == AWSCredential.CREDENTIAL_TYPE:
+            opts.set_opt(AWSModule.OPT_ACCESS_KEY, cred._access_key_id)
+            opts.set_opt(AWSModule.OPT_SECRET_KEY, cred._secret_key)
+            opts.set_opt(AWSModule.OPT_SESSION_TOKEN, cred._session_token)
+            opts.set_opt(AWSModule.OPT_AWS_REGION, cred._default_region)
 
         elif cred_type == 'MSFT':
-            opts.set_opt('AUTH_TOKEN', cred._access_token)
-            opts.set_opt('AUTH_PRINCIPAL', cred._principal)
-            opts.set_opt('AUTH_SECRET', cred._secret)
-            opts.set_opt('AUTH_TENANT', cred._tenant)
+            opts.set_opt(MicrosoftModule.OPT_AUTH_TOKEN, cred._access_token)
+            opts.set_opt(MicrosoftModule.OPT_AUTH_PRINCIPAL, cred._principal)
+            opts.set_opt(MicrosoftModule.OPT_AUTH_SECRET, cred._secret)
+            opts.set_opt(MicrosoftModule.OPT_AUTH_TENANT, cred._tenant)
             pass
 
         elif cred_type == 'GCP':
@@ -183,6 +186,7 @@ class CredentialStoreConnector(collections.abc.Mapping):
                 out.append(str(key))
         return out
 
-    # Todo: Query database and see if a credential entries exists with the supplied alias
-    def cred_alias_exists(self, alias: str) -> bool:
-        return True
+    # # Todo: Query database and see if a credential entries exists with the supplied alias
+    # def cred_alias_exists(self, alias: str) -> bool:
+    #     return True
+
