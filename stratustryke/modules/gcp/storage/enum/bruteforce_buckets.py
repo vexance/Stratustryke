@@ -1,9 +1,19 @@
-from stratustryke.core.module import StratustrykeModule
-from stratustryke.core.lib import stratustryke_dir
-from pathlib import Path
+
 import requests
 
+from pathlib import Path
+
+from stratustryke.core.module import StratustrykeModule
+from stratustryke.core.lib import stratustryke_dir
+
+
+
 class Module(StratustrykeModule):
+
+    OPT_KEYWORD = 'KEYWORD'
+    OPT_MUTATIONS = 'MUTATIONS'
+    OPT_THREADS = 'THREADS'
+
     def __init__(self, framework) -> None:
         super().__init__(framework)
         self._info = {
@@ -13,9 +23,9 @@ class Module(StratustrykeModule):
             'References': ['https://rhinosecuritylabs.com/gcp/google-cloud-platform-gcp-bucket-enumeration/']
         }
 
-        self._options.add_string('KEYWORD', 'Individual keyword to mutate (overriden by KEYWORD_FILE)', True)
-        self._options.add_string('MUTATIONS', 'File containing list of strings to pre/append to keyword(s)', True, default=str(stratustryke_dir()/'data/multi/cloud_storage_mutations.txt'))
-        self._options.add_integer('THREADS', '(WIP) Number of threads to use [1-10]', True, 1)
+        self._options.add_string(Module.OPT_KEYWORD, 'Individual keyword to mutate (overriden by KEYWORD_FILE)', True)
+        self._options.add_string(Module.OPT_MUTATIONS, 'File containing list of strings to pre/append to keyword(s)', True, default=str(stratustryke_dir()/'data/multi/cloud_storage_mutations.txt'))
+        self._options.add_integer(Module.OPT_THREADS, '(WIP) Number of threads to use [1-10]', True, 1)
 
 
     @property
@@ -27,17 +37,17 @@ class Module(StratustrykeModule):
         if not valid:
             return (valid, msg)
 
-        key = self.get_opt('KEYWORD')
+        key = self.get_opt(Module.OPT_KEYWORD)
         filename = key[5:] if key.startswith('file:') else None
         if filename != None:
             if not (Path(filename).exists() and Path(filename).is_file()):
                 return (False, f'Cannot find keyword file \'{filename}\'')
         
-        perms = self.get_opt('MUTATIONS')
+        perms = self.get_opt(Module.OPT_MUTATIONS)
         if not (Path(perms).exists() and Path(perms).is_file()):
             return (False, 'Cannot find specified permutations file')
 
-        threads = self.get_opt('THREADS')
+        threads = self.get_opt(Module.OPT_THREADS)
         if not threads in range(1, 11):
             return (False, f'Invalid number of threads not in range 1 - 10: {threads}')
 
@@ -63,9 +73,9 @@ class Module(StratustrykeModule):
 
 
     def run(self):
-        kw = self.get_opt('KEYWORD')
+        kw = self.get_opt(Module.OPT_KEYWORD)
 
-        is_pasted = self._options.get_opt('KEYWORD')._pasted
+        is_pasted = self._options.get_opt(Module.OPT_KEYWORD)._pasted
         if is_pasted: # paste command was used
             keywords = self.load_strings(kw, is_paste=True)
         elif Path.exists(Path(kw)): # filepath specified
@@ -73,8 +83,8 @@ class Module(StratustrykeModule):
         else:
             keywords = [kw]
 
-        perm_file = self.get_opt('MUTATIONS')
-        is_pasted = self._options.get_opt('MUTATIONS')._pasted
+        perm_file = self.get_opt(Module.OPT_MUTATIONS)
+        is_pasted = self._options.get_opt(Module.OPT_MUTATIONS)._pasted
 
         if is_pasted: # paste command was used
             mutations = self.load_strings(perm_file, is_paste=True)
@@ -96,7 +106,7 @@ class Module(StratustrykeModule):
         
         self.print_status('Creating mutated wordlist...')
         wordlist = self.permutate(keywords, mutations)
-        threads = self.get_opt('THREADS')
+        threads = self.get_opt(Module.OPT_THREADS)
 
         total = len(wordlist)
         percentiles = [int(total* (i * 0.1)) for i in range (1, 11)]

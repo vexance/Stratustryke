@@ -77,7 +77,7 @@ class Module(AWSModule):
 
                 if all([fed_key, fed_secret, fed_token]):
                     self.print_status(f'Retrieved federation token for: {fed_arn}')
-                    workspace = self.framework._config.get_val('WORKSPACE')
+                    workspace = self.framework._config.get_val(self.framework.CONF_WORKSPACE)
                     federated_credential = AWSCredential(self.name, workspace, default_region=cred._default_region, access_key=fed_key, secret_key=fed_secret, session_token=fed_token)
 
             except Exception as err:

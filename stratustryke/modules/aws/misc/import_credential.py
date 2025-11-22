@@ -20,7 +20,7 @@ class Module(AWSModule):
 
 
         self._options.add_string(Module.OPT_ALIAS_NAME, 'Alias name for the credential', True)
-        self._options.add_string(Module.OPT_WORKSPACE, 'Workspace to associate with the credential', True, default=self.framework._config.get_val(Module.OPT_WORKSPACE))
+        self._options.add_string(Module.OPT_WORKSPACE, 'Workspace to associate with the credential', True, default=self.framework._config.get_val(self.framework.CONF_WORKSPACE))
         self._options.set_opt(Module.OPT_AWS_REGION, AWS_DEFAULT_REGION)
 
 

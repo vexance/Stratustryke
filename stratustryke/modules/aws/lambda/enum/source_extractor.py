@@ -109,7 +109,7 @@ class Module(AWSModule):
         try:
             # Make sure to conform to framework HTTP proxy settings
             HTTP_PROXY = self.web_proxies
-            HTTP_VERIFY_SSL = self.framework._config.get_val('HTTP_VERIFY_SSL')
+            HTTP_VERIFY_SSL = self.framework._config.get_val(self.framework.CONF_HTTP_VERIFY_SSL)
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
             res = requests.get(s3_url, stream=True, proxies=HTTP_PROXY, verify=HTTP_VERIFY_SSL)

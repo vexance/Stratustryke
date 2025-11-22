@@ -33,7 +33,7 @@ class Module(AWSModule):
 
         self._advanced.add_boolean(Module.OPT_SKIP_IMPORT, 'When enabled, do not import the credential', False, False)
         self._advanced.add_integer(Module.OPT_DURATION, 'Time (minutes | 15-60) for session to be valid for [defaut: 50]', True, 30)
-        self._advanced.add_string(Module.OPT_WORKSPACE, 'Workspace for cred import [framework default when unset]', True, self.framework._config.get_val(Module.OPT_WORKSPACE))
+        self._advanced.add_string(Module.OPT_WORKSPACE, 'Workspace for cred import [framework default when unset]', True, self.framework._config.get_val(self.framework.CONF_WORKSPACE))
 
 
     @property

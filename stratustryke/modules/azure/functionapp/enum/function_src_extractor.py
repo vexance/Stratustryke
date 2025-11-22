@@ -32,7 +32,7 @@ class Module(AzureModule):
         path = f"subscriptions/{subscription}/providers/Microsoft.Web/sites?api-version=2025-03-01"
         headers = {'Authorization': f'Bearer {token}'}
 
-        res = self.http_request('GET', f'{AZ_MGMT_URL}/{path}', headers=token)
+        res = self.http_request('GET', f'{AZ_MGMT_REST_URL}/{path}', headers=token)
 
         if not res.ok:
             self.print_error(f'Error during GET /{path}')
@@ -82,7 +82,7 @@ class Module(AzureModule):
         path = f'subscriptions/{subscription}/resourceGroups/{rg}/providers/Microsoft.Web/sites/{name}/functions?api-version=2025-03-1'
 
         try:
-            res = self.http_request('GET', f'{AZ_MGMT_URL}/{path}', headers=headers)
+            res = self.http_request('GET', f'{AZ_MGMT_REST_URL}/{path}', headers=headers)
         except RuntimeError as e:
             self.print_warning(f'Failed to list functions for {name}')
             if self.verbose: self.print_error(str(e))
