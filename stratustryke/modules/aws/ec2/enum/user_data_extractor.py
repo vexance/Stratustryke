@@ -30,11 +30,9 @@ class Module(AWSModule):
     def search_name(self):
         return f'aws/ec2/enum/{self.name}'
     
-    def describe_instances(self, instance_id: str = None) -> list:
-        session = self.get_cred().session()
+    def describe_instances(self, region: str, instance_id: str = None) -> list:
+        session = self.get_cred().session(region)
         account = self.get_cred().account_id
-        VERBOSE = self.get_opt(Module.OPT_VERBOSE)
-        region = self.get_opt(Module.OPT_AWS_REGION)
         only_running = self.get_opt(Module.OPT_ONLY_RUNNING)
 
         ret = []
@@ -53,8 +51,8 @@ class Module(AWSModule):
 
 
         except Exception as err:
-            self.print_failure(f'Failed to perform ec2:DescribeInstances call')
-            self.print_error(f'{err}')
+            self.print_failure(f'Failed to perform ec2:DescribeInstances call in {region}')
+            if self.verbose: self.print_error(f'{err}')
             return []
         
         
@@ -79,7 +77,7 @@ class Module(AWSModule):
                 formatted_tags[key] = val
 
             # Instance State
-            i_state = i.get('State', {}).get('Name', None)
+            i_state = i.get('State', {}).get('Name', 'unknown')
             if only_running and i_state != 'running': continue 
 
             # Show we've found the instance, if a name is assigned we'll display that too
@@ -88,17 +86,17 @@ class Module(AWSModule):
             self.print_success(f'{prefix} {i_arn}')
 
             # Print tags if VERBOSE is on
-            if VERBOSE and (len(formatted_tags.keys()) > 0):
+            if self.verbose and (len(formatted_tags.keys()) > 0):
                 self.print_status(f'({i_id}) Instance Tags: {formatted_tags}')
 
             # Obtain / show IAM role association
             iam_role = i.get('IamInstanceProfile', {}).get('Arn', None)
-            if VERBOSE and (iam_role != None):
-                self.print_status(f'({i_id}) IAM Association: {iam_role}')
+            if self.verbose and (iam_role != None):
+                self.print_status(f'({i_id}) Instance Profile: {iam_role}')
 
             # Show assigned key at launch
             key_name = i.get('KeyName', None)
-            if VERBOSE and (key_name != None):
+            if self.verbose and (key_name != None):
                 self.print_status(f'({i_id}) Keypair Name: {key_name}')
 
             ret.append(i_id)
@@ -106,45 +104,49 @@ class Module(AWSModule):
         return ret
 
 
-    def get_user_data(self, instance_id: str) -> None:
-        session = self.get_cred().session()
+    def get_user_data(self, region: str, instance_id: str) -> None:
+        session = self.get_cred().session(region)
 
         try:
             client = session.client('ec2')
             res = client.describe_instance_attribute(InstanceId=instance_id, Attribute='userData')
 
             user_data = res.get('UserData', {}).get('Value', None)
-            return user_data
         
         except Exception as err:
             self.print_failure(f'Unable to retrieve user data for instance {instance_id}')
-            self.print_error(f'{err}')
+            if self.verbose: self.print_error(f'{err}')
             return None
+        
+        return user_data
         
     
     def run(self) -> None:
 
-        instances = self.describe_instances()
-        
-        for instance in instances:
-            content = self.get_user_data(instance)
+        for region in self.get_regions():
 
-            if content != None:
-
-                content = b64decode(content).decode('utf-8')
-
-                try:
-                    download_path = str(Path(self.get_opt(Module.OPT_DOWNLOAD_DIR)).resolve().absolute())
-                    with open(f'{download_path}/{instance}.txt', 'w') as file:
-                        file.write(content)
-
-                    self.print_success(f'Wrote user data to {download_path}/{instance}.txt')
-
-                except Exception as err:
-                    self.print_error(f'Error writing user data: {err}')
+            instances = self.describe_instances(region)
             
-            else:
-                self.print_status(f'No user data found for {instance}')
+            for instance in instances:
+                content = self.get_user_data(region, instance)
 
+                if content != None:
+
+                    content = b64decode(content).decode('utf-8')
+
+                    try:
+                        download_path = str(Path(self.get_opt(Module.OPT_DOWNLOAD_DIR)).resolve().absolute())
+                        with open(f'{download_path}/{instance}.txt', 'w') as file:
+                            file.write(content)
+
+                        self.print_success(f'Wrote user data to {download_path}/{instance}.txt')
+
+                    except Exception as err:
+                        self.print_failure(f'Error writing user data for instance {instance}')
+                        if self.verbose: self.print_error(str(err))
                 
+                else:
+                    self.print_warning(f'No user data found for {instance}')
+        
+        return None
 
