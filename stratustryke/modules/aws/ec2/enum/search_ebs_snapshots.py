@@ -23,45 +23,56 @@ class Module(AWSModule):
     @property
     def search_name(self):
         return f'aws/ec2/enum/{self.name}'
+    
 
-    def run(self):
-        cred = self.get_cred()
-        target = self.get_opt(Module.OPT_TARGET_ACCOUNT_ID)
-
-        self.print_status(f'Filtering ec2:DescribeSnapshots on owner-id: {target}')
+    def search_for_public_snapshots(self, region: str, target: list[str]) -> list:
+        '''ec2:DescribeSnapshots in a region filtering on the owner-id as the target'''
         snapshots = []
         try:
-            session = cred.session()
-            client = session.client('ec2')
+            client = self.get_cred.session(region).client('ec2')
 
-            res = client.describe_snapshots(Filters=[{
+            paginator = client.get_paginator('describe_snapshots')
+            pages = paginator.paginate(Filters=[{
                 'Name': 'owner-id',
-                'Values': [f'{target}']
+                'Values': target
             }])
-            snapshots.extend(res.get('Snapshots', []))
-            pagination_token = res.get('NextToken', None)
 
-            while pagination_token != None:
-                res = client.describe_snapshots(NextToken=pagination_token, Filters=[{
-                    'Name': 'owner-id',
-                    'Values': [f'{target}']
-                }])
-                snapshots.extend(res.get('Snapshots', []))
-                pagination_token = res.get('NextToken', None)
+            for page in pages: snapshots.extend(page.get('Snapshots', []))
 
         except Exception as err:
-            self.print_failure(f'{err}')
+            self.print_failure(f'Failed to perform ec2:DescribeSnapshots in {region}')
+            if self.verbose: self.print_error(str(err))
 
-        if len(snapshots) < 1:
-            self.print_status(f'No public EBS snapshots found.')
+        return snapshots
 
-        for snap in snapshots:
-            enc = 'Encrypted' if (snap.get('Encrypted', False)) else 'Unencrypted'
-            snap_id = snap.get('SnapshotId', None)
-            size = snap.get('VolumeSize', -1)
-            desc = snap.get('Description', '')
+
+    def run(self):
+
+        targets = self.get_opt_multiline(Module.OPT_TARGET_ACCOUNT_ID)
+        regions = self.get_regions()
+
+        self.print_status(f'Searching for snapshots with owner ids: {targets}')
+        for region in regions:
+            if self.verbose: self.print_status(f'Filtering ec2:DescribeSnapshots in {region} on target owners')
+            
+            snapshots = self.search_for_public_snapshots(region, targets)
+
+            snapshot_count = len(snapshots)
+            if snapshot_count < 1:
+                self.print_warning(f'No snapshots found in {region} for account(s) {", ".join(targets)}')
+                continue
+
+            for snap in snapshots:
+                enc = 'Encrypted' if (snap.get('Encrypted', False)) else 'Unencrypted'
+                snap_id = snap.get('SnapshotId', None)
+                owner_id = snap.get('OwnerId', 'UNKNOWN')
+                size = snap.get('VolumeSize', -1)
+                desc = snap.get('Description', '')
+                snap_arn = f'arn:aws:ec2:{region}:{owner_id}:snapshot/{snap_id}'
 
             if (snap_id != None):
-                self.print_success(f'{enc} snapshot: {snap_id} ({size} GiB) - {desc}')
+                self.print_success(f'({size} GiB | {enc}) {snap_arn}')
+                if desc != '': self.print_success(f'({snap_id}) Description: {desc}')
         
         return
+
