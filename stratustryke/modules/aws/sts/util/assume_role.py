@@ -79,7 +79,7 @@ class Module(AWSModule):
         ext_id = self.get_opt(Module.OPT_EXTERNAL_ID)
         duration = self.get_opt(Module.OPT_DURATION)
         session_name = self.get_opt(Module.OPT_SESSION_NAME)
-        region = self.get_opt(Module.OPT_AWS_REGION)
+        region = self.get_opt(Module.OPT_AWS_REGION) # In this case we want to actually preserve __DEFAULT__
 
         skip_import = self.get_opt(Module.OPT_SKIP_IMPORT)
         arns = self.get_role_arns(cred.account_id)

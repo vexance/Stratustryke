@@ -1,8 +1,9 @@
+
 from stratustryke.core.module.aws import AWSModule
 
 class Module(AWSModule):
 
-    OPT_ENUM_KEY = 'ENUM_KEY'
+    OPT_TARGET_KEY = 'TARGET_KEY'
 
     def __init__(self, framework) -> None:
         super().__init__(framework)
@@ -15,7 +16,7 @@ class Module(AWSModule):
             ]
         }
 
-        self._options.add_string(Module.OPT_ENUM_KEY, 'Target AWS access key id to enumerate account id for', True, regex='(?:A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}')
+        self._options.add_string(Module.OPT_TARGET_KEY, 'Target AWS access key id to enumerate account id for (f/p)', True)
 
 
     @property
@@ -23,23 +24,23 @@ class Module(AWSModule):
         return f'aws/iam/enum/{self.name}'
 
 
-    def run(self) -> bool:
-        enum_key = self.get_opt(Module.OPT_ENUM_KEY)
+    def run(self):
+        target_keys = self.get_opt_multiline(Module.OPT_TARGET_KEY)
 
-        cred = self.get_cred()
+        session = self.get_cred().session() # Might need to code region in? Testing empty for now...
+        client = session.client('sts')
 
-        try:
-            session = cred.session()
-            client = session.client('sts')
-            
-            self.print_status(f'Performing sts:GetAccessKeyInfo call...')
-            res = client.get_access_key_info(AccessKeyId=enum_key)
-            target_account = res.get('Account')
-            success = True
-            self.print_success(f'Found Account Id \'{target_account}\'')
-        except Exception as err:
-            self.print_error(f'{err}')
-            success = False
+        self.print_status(f'Resolving access key identifiers via sts:GetAccessKeyInfo call(s)...')
+        
+        for key_id in target_keys:
+            try:
+                res = client.get_access_key_info(AccessKeyId=key_id)
+                target_account = res.get('Account', None)
+                self.print_success(f'{key_id} is associated with account {target_account}')
 
-        self.print_line('')
-        return success
+            except Exception as err:
+                self.print_failure(f'Could not identify account for key id {key_id}')
+                if self.verbose: self.print_error(f'{err}')
+                continue
+
+        return None

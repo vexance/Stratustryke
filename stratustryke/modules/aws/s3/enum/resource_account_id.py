@@ -120,8 +120,8 @@ class Module(AWSModule):
         try:
             res = self.attempt_access(role_creds)
         except StratustrykeException as err:
-            self.print_error(f'Cannot verify that the bucket/object is public')
-            self.print_error(f'{err}')
+            self.print_failure(f'Cannot verify that the bucket/object is public')
+            if self.verbose: self.print_error(f'{err}')
             return False
 
         # Now try and derive the account id with s3:ResourceAccount policies
@@ -144,8 +144,8 @@ class Module(AWSModule):
                         break
 
         except StratustrykeException as err:
-            self.print_error('Error during account idenfication process')
-            self.print_error(f'{err}')
+            self.print_failure('Error during account idenfication process')
+            if self.verbose: self.print_error(f'{err}')
             return False
 
 
@@ -155,3 +155,4 @@ class Module(AWSModule):
 
         else:
             self.print_success(f'Identified AWS account id: {builder}')
+

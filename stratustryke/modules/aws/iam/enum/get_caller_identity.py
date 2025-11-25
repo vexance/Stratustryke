@@ -18,19 +18,19 @@ class Module(AWSModule):
 
 
     def run(self):
-        cred = self.get_cred()
+        region = self.get_regions(multi_support=False)[0]
         try:
-            session = cred.session()
-            client = session.client('sts')
+            client = self.get_cred().session(region).client('sts')
             res = client.get_caller_identity()
 
             arn = res.get('Arn', res.get('UserId', None))
             if arn == None:
-                self.print_failure('Unable to perform sts:GetCallerIdentity')
-            self.print_success(f'Found principle {arn}')
-            return True
+                self.print_failure('Unable to perform sts:GetCallerIdentity with supplied credentials')
+            
+            self.print_success(arn)
 
         except Exception as err:
-            self.print_error(f'{err}')
-            return False
+            self.print_failure('Unable to perform sts:GetCallerIdentity with supplied credentials')
+            if self.verbose: self.print_error(str(err))
 
+        return None

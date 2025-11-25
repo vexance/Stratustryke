@@ -26,23 +26,22 @@ class Module(AWSModule):
 
 
     def run(self):
-        region = self.get_opt(Module.OPT_AWS_REGION)
+        region = self.get_regions(multi_support=False)[0]
 
         acc_id = self.get_opt(Module.OPT_ACCOUNT_ID)
         topic = self.get_opt(Module.OPT_ACCOUNT_ID)
 
         topic_arn = f'arn:aws:sns:{region}:{acc_id}:{topic}'
-        cred = self.get_cred()
 
         try:
-            session = cred.session()
-            client = session.client('sns')
+            client = self.get_cred().session(region).client('sns')
 
             self.print_status('Attempting sns:Publish call...')
             res = client.publish(TopicArn=topic_arn, Message='sns-message-stratustryke')
             
-            self.print_failure('sns:Publish successful - unable to identify principle')
+            self.print_failure('sns:Publish succeeded unexpectedly - unable to identify principle')
             success = False
+
         except Exception as err:
             # We actually want this to throw a AuthorizationErrorException
             msg = f'{err}'

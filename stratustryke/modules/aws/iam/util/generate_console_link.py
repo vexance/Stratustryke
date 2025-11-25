@@ -36,7 +36,8 @@ class Module(AWSModule):
 
 
     def run(self):
-        cred = self.get_cred()
+        region = self.get_regions(multi_support=False)[0]
+
         duration = self.get_opt(Module.OPT_DURATION) * 60 # duration is sent in seconds to the APIs
         policy = str({
             "Version": "2012-10-17",
@@ -49,10 +50,10 @@ class Module(AWSModule):
                 }
             ]
         }).replace("'", '"')
-        auth_key = self.get_opt('AUTH_ACCESS_KEY_ID')
+        auth_key = self.get_opt(Module.OPT_ACCESS_KEY)
 
         federated_credential = False
-        session = cred.session()
+        session = self.get_cred().session(region)
 
         if auth_key.startswith('AKIA'): # long-term creds; use sts:GetFederationToken for temp credentials
             if duration > 2160 or duration < 15:
@@ -78,7 +79,7 @@ class Module(AWSModule):
                 if all([fed_key, fed_secret, fed_token]):
                     self.print_status(f'Retrieved federation token for: {fed_arn}')
                     workspace = self.framework._config.get_val(self.framework.CONF_WORKSPACE)
-                    federated_credential = AWSCredential(self.name, workspace, default_region=cred._default_region, access_key=fed_key, secret_key=fed_secret, session_token=fed_token)
+                    federated_credential = AWSCredential(self.name, workspace, default_region=region, access_key=fed_key, secret_key=fed_secret, session_token=fed_token)
 
             except Exception as err:
                 self.print_failure('Unable to retrieve temporary credentials with sts:GetFederationToken')
@@ -95,8 +96,8 @@ class Module(AWSModule):
 
         else:
             url_key = auth_key
-            url_secret = self.get_opt('AUTH_SECRET_KEY')
-            url_token = self.get_opt('AUTH_SESSION_TOKEN')
+            url_secret = self.get_opt(Module.OPT_SECRET_KEY)
+            url_token = self.get_opt(Module.OPT_SESSION_TOKEN)
 
         if not all([url_key, url_secret, url_token]):
             self.print_failure('Unable to build JSON session string with supplied credentials')

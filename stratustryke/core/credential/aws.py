@@ -72,6 +72,7 @@ class AWSCredential(CloudCredential):
     def session(self, region = None) -> boto3.Session:
         '''Returns a botocore session for the creds'''
         session_region = region if (region != None) else self._default_region
+        if session_region == AWS_DEFAULT_REGION: session_region = AWS_SINGULAR_DEFAULT_REGION # protect against __DEFAULT__ making its way here accidentaly
         # Create botocore session with either specified or default region
         try:
             self._session = boto3.Session(self._access_key_id, self._secret_key, self._session_token, session_region)
