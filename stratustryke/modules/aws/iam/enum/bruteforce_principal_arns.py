@@ -51,7 +51,8 @@ class Module(AWSModule):
 
     def run(self):
         cred = self.get_cred()
-        session = cred.session()
+        region = self.get_regions(False)[0]
+        session = cred.session(region)
 
         bucket = self.get_opt(Module.OPT_S3_BUCKET)
         verbose = self.get_opt(Module.OPT_VERBOSE)

@@ -14,29 +14,30 @@ class Module(AWSModule):
             ]
         }
 
+        self.set_opt(Module.OPT_VERBOSE, True) # Default to true for this one
+
 
     @property
     def search_name(self):
         return f'aws/iam/enum/{self.name}'
 
-    def run(self):
-        region = self.get_opt(Module.OPT_AWS_REGION)
-        cred = self.get_cred(region=region)
-        verbose = self.get_opt(Module.OPT_VERBOSE)
 
-        self.print_status(f'Enumerating API privileges...')
+    def run(self):
+        regions = self.get_regions(False)
+        cred = self.get_cred()
 
         total = sum([len(BRUTEFORCE_TESTS[key]) for key in BRUTEFORCE_TESTS.keys()])
         percentiles = [int(total* (i * 0.05)) for i in range (1, 21)]
 
-        session = cred.session()
+        session = cred.session(regions[0])
         i = 0
+
+        self.print_status(f'Enumerating API privileges with region {regions[0]}...')
         self.print_status(f'Attempting {total} total API calls')
         # Iterate through services
         for service in BRUTEFORCE_TESTS.keys():
             calls = BRUTEFORCE_TESTS[service]
 
-            
             try:
                 client = session.client(str(service))
             except Exception as err:
@@ -64,7 +65,8 @@ class Module(AWSModule):
 
                 except (botocore.exceptions.ClientError, botocore.exceptions.EndpointConnectionError,
                         botocore.exceptions.ConnectTimeoutError, botocore.exceptions.ReadTimeoutError):
-                    if verbose:
+                    
+                    if self.verbose:
                         self.print_failure(f'{service}:{"".join(split)}')
                     self.framework._logger.error(f'{service}:{"".join(split)} failed.')
 

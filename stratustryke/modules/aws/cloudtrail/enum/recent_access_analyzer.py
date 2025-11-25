@@ -32,7 +32,7 @@ class Module(AWSModule):
 
     @property
     def search_name(self):
-        return f'aws/enum/authed/{self.name}'
+        return f'aws/cloudtrail/enum/{self.name}'
     
 
     def validate_options(self) -> tuple:
@@ -47,9 +47,11 @@ class Module(AWSModule):
         return (True, None)
     
 
-    def fetch_records(self, read_only: bool) -> bool:
+    def fetch_records(self, region: str, read_only: bool) -> bool:
         '''Paginate through CloudTrail events'''
-        session = self.get_cred().session()
+
+        self.print_status(f'Ingesting events from {region}...')
+        session = self.get_cred().session(region)
         
         # Determine timeframe limits
         delta = self.get_opt(Module.OPT_TIMEDELTA)
@@ -64,7 +66,6 @@ class Module(AWSModule):
             paginator = client.get_paginator('lookup_events')
 
             pages = paginator.paginate(LookupAttributes=attributes, StartTime=query_start, EndTime=query_end)
-            self.print_status(f'Iterating through event pages...')
 
             for page in pages:
                 events = [json.loads(e.get('CloudTrailEvent', {})) for e in page.get('Events', [])]
@@ -92,7 +93,7 @@ class Module(AWSModule):
                     elif error_code == 'AccessDenied': prefix = f'[-]({error_code}) '
                     else: prefix = f'[!]({error_code}) '
                     
-                    msg = f'{prefix}PRINCIPAL_ARN called {service}:{event_name}'
+                    msg = f'{prefix}__PRINCIPAL_ARN__ called {service}:{event_name}'
                     #msg = f'{prefix} PRINCIPAL_ARN {role_session}called {service}:{event_name}'
                     #if region: msg = f'{msg} in {region}'
 
@@ -107,23 +108,23 @@ class Module(AWSModule):
 
 
     def run(self):       
-        self.print_status('Starting query for ReadOnly CloudTrail Insights events')
-        self.fetch_records(True)
+        self.print_status('Starting query for CloudTrail events...')
+        
+        for region in self.get_regions(): self.fetch_records(region, True)
 
         if not self.get_opt(Module.OPT_SKIP_NONREAD):
-            self.print_status('Starting query for non-ReadOnly CloudTrail Insights events')
-            self.fetch_records(False)
+            self.print_status('Starting query for non-ReadOnly CloudTrail events')
+            for region in self.get_regions(): self.fetch_records(region, False)
 
         principals = self.get_opt_multiline(Module.OPT_PRINCIPAL_ARN, unique=True)
         if principals == None: principals = [f'{key}' for key in self.trail_events.keys()]
 
         for arn in principals:
             events = self.trail_events.get(arn, set())
-            event_list = list(events)
 
-            for event in event_list:
+            for event in events:
                 msg = event[3::]
-                msg = msg.replace(Module.OPT_PRINCIPAL_ARN, arn)
+                msg = msg.replace('__PRINCIPAL_ARN__', arn)
                 prefix = event[0:3]
 
                 if prefix == '[+]': self.print_success(msg)

@@ -5,7 +5,7 @@ from requests_auth_aws_sigv4 import AWSSigV4
 from re import match as regex_match
 
 from stratustryke.core.credential import CloudCredential
-from stratustryke.settings import AWS_DEFAULT_REGION, DEFAULT_WORKSPACE
+from stratustryke.settings import AWS_DEFAULT_REGION, AWS_SINGULAR_DEFAULT_REGION, DEFAULT_WORKSPACE
 from stratustryke.lib import StratustrykeException
 from stratustryke.lib.regex import AWS_ROLE_ARN_REGEX
 
@@ -84,7 +84,7 @@ class AWSCredential(CloudCredential):
 
     def verify(self) -> bool:
         '''Performs an STS get-caller-identity call in order to determine the access_key_id, secret_key, and session_token are valid'''
-        session = self.session('us-east-1') # Might need to hardcode region in case __DEFAULT__ is defaulted to
+        session = self.session(AWS_SINGULAR_DEFAULT_REGION) # Might need to hardcode region in case __DEFAULT__ is defaulted to
         try:
             client = session.client('sts')
             res = client.get_caller_identity()
@@ -125,7 +125,7 @@ class AWSCredential(CloudCredential):
             policy = '{"Version": "2012-10-17", "Statement": {"Effect": "Allow", "Action": "*", "Resource": "*"} }'
 
         try: 
-            session = self.session(region if (region != '__DEFAULT__') else 'us-east-1')
+            session = self.session(region if (region != '__DEFAULT__') else AWS_SINGULAR_DEFAULT_REGION)
             client = session.client('sts')
             res = client.assume_role(RoleSessionName=session_name, RoleArn=role, DurationSeconds=duration, ExternalId=ext_id, Policy=policy)
 

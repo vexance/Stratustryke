@@ -59,6 +59,7 @@ AWS_ALL_REGIONS = AWS_DEFAULT_ENABLED_REGIONS + AWS_DISABLED_REGIONS
 
 # Default framework configuration settings
 AWS_DEFAULT_REGION = '__DEFAULT__' # __DEFAULT__ will indicate running in all default regions
+AWS_SINGULAR_DEFAULT_REGION = 'us-east-1' # used if a module doesn't have multi-region support
 AZURE_DEFAULT_SUBS = '__DEFAULT__' # __DEFAULT__ will result in attempting to list all subscriptions the principal can access
 GCP_DEFAULT_PROJECTS = '__DEFAULT__' # __DEFAULT__ will attempt to list projects the principal can access
 

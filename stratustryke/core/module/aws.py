@@ -2,7 +2,7 @@
 # Purpose: Modules to interact with AWS cloud resources / services
 
 from stratustryke.core.module import StratustrykeModule
-from stratustryke.settings import AWS_DEFAULT_REGION, AWS_DEFAULT_ENABLED_REGIONS
+from stratustryke.settings import AWS_DEFAULT_REGION, AWS_DEFAULT_ENABLED_REGIONS, AWS_SINGULAR_DEFAULT_REGION
 from stratustryke.core.credential.aws import AWSCredential
 from stratustryke.lib.regex import AWS_ACCESS_KEY_REGEX, AWS_SECRET_KEY_REGEX, AWS_SESSION_TOKEN_REGEX
 
@@ -54,12 +54,13 @@ class AWSModule(StratustrykeModule):
         return AWSCredential(self.name, access_key=access_key, secret_key=secret, session_token=token, default_region=cred_region)
         
 
-    def get_regions(self) -> list[str]:
+    def get_regions(self, multi_support: bool = True) -> list[str]:
         '''Return the list of regions to run the module in'''
         regions = self.get_opt_multiline(AWSModule.OPT_AWS_REGION)
         if len(regions) == 1:
             if regions == [AWS_DEFAULT_REGION] or regions == None:
-                regions = AWS_DEFAULT_ENABLED_REGIONS
+                if multi_support: regions = AWS_DEFAULT_ENABLED_REGIONS
+                else: regions = [AWS_SINGULAR_DEFAULT_REGION]
 
         # Do we need to do input validation? For now leaving as-is
         return regions
