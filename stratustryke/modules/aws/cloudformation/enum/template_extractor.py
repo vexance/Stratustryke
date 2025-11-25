@@ -17,8 +17,8 @@ class Module(AWSModule):
         super().__init__(framework)
         self._info = {
             'Authors': ['@vexance'],
-            'Description': 'Exfiltrate lambda source code from accessible functions',
-            'Details': 'Describe lambda function(s), then attempts to use the caller\'s credentials to retrieve the source code for target functions or all functions if not supplied',
+            'Description': 'Extract Cloudformation template contents and stack parameters',
+            'Details': 'Describe Cloudformation stacks(s), then attempt to retrieve stack definition and paramaeters',
             'References': [ '' ]
         }
 
