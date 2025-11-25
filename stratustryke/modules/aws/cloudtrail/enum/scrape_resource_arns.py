@@ -3,13 +3,13 @@ from datetime import datetime, timedelta
 from re import findall
 
 from stratustryke.core.module.aws import AWSModule
+from stratustryke.lib.regex import AWS_ANY_ARN_REGEX
 
 
 class Module(AWSModule):
 
     OPT_TIMEDELTA = 'TIMEDELTA_DAYS'
     OPT_SKIP_NONREAD = 'SKIP_NONREAD'
-    ARN_SEARCH_REGEX = '(\"|\\s)(arn:aws:[a-z0-9]+:[a-z0-9\\-]*:(|[0-9]{12}):[^\\s\"]+)(\"|\\s)'
 
     def __init__(self, framework) -> None:
         super().__init__(framework)
@@ -64,7 +64,7 @@ class Module(AWSModule):
 
             for page in pages:
                 events = str([e.get('CloudTrailEvent', {}) for e in page.get('Events', [])])
-                matches = findall(Module.ARN_SEARCH_REGEX, events)
+                matches = findall(AWS_ANY_ARN_REGEX, events)
                 for match in matches:
                     arns.add(match[1]) # tuple at index 1 is the ARN value ('"', ARN, AccountId, '"')
                     
