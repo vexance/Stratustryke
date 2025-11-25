@@ -2,7 +2,7 @@
 *__pycache__/
 /bin/
 /include/
-/lib64/
+lib64
 /lib/
 pyvenv.cfg
 stratustryke/modules/custom/*

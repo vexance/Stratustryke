@@ -125,7 +125,7 @@ class AWSCredential(CloudCredential):
             policy = '{"Version": "2012-10-17", "Statement": {"Effect": "Allow", "Action": "*", "Resource": "*"} }'
 
         try: 
-            session = self.session()
+            session = self.session(region if (region != '__DEFAULT__') else 'us-east-1')
             client = session.client('sts')
             res = client.assume_role(RoleSessionName=session_name, RoleArn=role, DurationSeconds=duration, ExternalId=ext_id, Policy=policy)
 

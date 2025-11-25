@@ -31,8 +31,8 @@ class Module(AWSModule):
         return f'aws/cloudformation/enum/{self.name}'
     
 
-    def list_stacks(self) -> list:
-        session = self.get_cred().session()
+    def list_stacks(self, region: str) -> list:
+        session = self.get_cred().session(region)
         stacks = []
         
         try:
@@ -43,7 +43,7 @@ class Module(AWSModule):
 
         except Exception as err:
             self.print_failure('Failure performing cloudformation:ListStacks call')
-            self.print_error(f'{err}')
+            if self.verbose: self.print_error(f'{err}')
             return []
         
         for page in pages:
@@ -55,9 +55,9 @@ class Module(AWSModule):
         return stacks
 
 
-    def describe_stacks(self, stack_name: str = None) -> dict:
-        session = self.get_cred().session()
-        VERBOSE = self.get_opt(Module.OPT_VERBOSE)
+    def describe_stacks(self, region: str, stack_name: str = None) -> dict:
+        '''List and get stack metadata'''
+        session = self.get_cred().session(region)
         ret = {}
         ### First we'll try cloudformation:DescribeStacks; if this fails we may need to list and then describe individualls
 
@@ -73,8 +73,8 @@ class Module(AWSModule):
                 pages = [page]
         
         except Exception as err:
-            self.frame.print_failure(f'Could not call cloudformation:DescribeStacks for stack \'{stack_name}\'')
-            self.print_error(f'{err}')
+            self.print_failure(f'Could not call cloudformation:DescribeStacks for stack \'{stack_name}\'')
+            if self.verbose: self.print_error(f'{err}')
             return None
 
 
@@ -88,7 +88,7 @@ class Module(AWSModule):
                 self.print_success(f'Found {stack_id}')
 
                 description = stack.get('Description', None)
-                if VERBOSE and (not (description == None or description == '')):
+                if self.verbose and (not (description == None or description == '')):
                     self.print_status(f'({name}) Description: {description}')
 
                 # Inspect Stack Parameters
@@ -103,7 +103,7 @@ class Module(AWSModule):
 
                     formatted_params[key] = value
 
-                if VERBOSE and (len(formatted_params.keys()) > 0):
+                if self.verbose and (len(formatted_params.keys()) > 0):
                     self.print_status(f'({name}) Stack Parameters: {formatted_params}')
 
                 # Inspect stack Tags
@@ -115,7 +115,7 @@ class Module(AWSModule):
 
                     formatted_tags[key] = val
 
-                if VERBOSE and (len(formatted_tags.keys()) > 0):
+                if self.verbose and (len(formatted_tags.keys()) > 0):
                     self.print_status(f'({name}) Stack Tags: {formatted_tags}')
 
                 ret[name] = stack_id
@@ -123,8 +123,8 @@ class Module(AWSModule):
         return ret
     
 
-    def get_stack_template(self, stack_name: str, stack_id: str) -> bool:
-        session = self.get_cred().session()
+    def get_stack_template(self, region: str, stack_name: str, stack_id: str) -> bool:
+        session = self.get_cred().session(region)
         download_dir = self.get_opt(Module.OPT_DOWNLOAD_DIR)
 
         try:
@@ -135,7 +135,7 @@ class Module(AWSModule):
         
         except Exception as err:
             self.print_failure(f'Error retriving stack template for {stack_id}')
-            self.print_error(f'{err}')
+            if self.verbose: self.print_error(f'{err}')
 
         
         
@@ -161,22 +161,25 @@ class Module(AWSModule):
 
     def run(self) -> None:
 
+        regions = self.get_regions()
         # First, just attempt to describe all stacks
-        stacks = self.describe_stacks(None)
+        
+        for region in regions:
+            stacks = self.describe_stacks(region)
 
-        # First get all the metadata with regards to the stacks while collecting stack ARNs/Ids
-        if stacks == {}: self.print_status('No cloudformation stacks found')
-        elif stacks == None:
-            self.print_status('cloudformation:DescribeStacks failed, attempting to perform cloudformation:ListStacks call')
-            stack_names = self.list_stacks()
+            # First get all the metadata with regards to the stacks while collecting stack ARNs/Ids
+            if stacks == {}: self.print_status('No cloudformation stacks found')
+            elif stacks == None:
+                self.print_status('cloudformation:DescribeStacks failed, attempting to perform cloudformation:ListStacks call')
+                stack_names = self.list_stacks(region)
 
-            for stack in stack_names:
-                ret = self.describe_stacks(stack)
-                stacks[stack] = ret[stack]
+                for stack in stack_names:
+                    ret = self.describe_stacks(region, stack)
+                    stacks[stack] = ret[stack]
 
-        # Now we'll iterate through the ARNs and download the stack templates
-        for stack in stacks.keys():
-            stack_arn = stacks[stack]
+            # Now we'll iterate through the ARNs and download the stack templates
+            for stack in stacks.keys():
+                stack_arn = stacks[stack]
 
-            self.get_stack_template(f'{stack}', stack_arn)
+                self.get_stack_template(region, f'{stack}', stack_arn)
         

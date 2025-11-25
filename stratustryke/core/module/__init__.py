@@ -35,7 +35,7 @@ class StratustrykeModule(object):
 
 
     @property
-    def verbose(self) -> str:
+    def verbose(self) -> bool:
         return self.get_opt(StratustrykeModule.OPT_VERBOSE)
 
 

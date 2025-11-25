@@ -42,10 +42,10 @@ class Module(AWSModule):
         return (True, None)
     
 
-    def fetch_records(self, read_only: bool) -> list:
+    def fetch_records(self, region: str, read_only: bool) -> set:
         '''Paginate through CloudTrail events'''
-        session = self.get_cred().session()
-        arns = []
+        session = self.get_cred().session(region)
+        arns = set()
 
         # Determine timeframe limits
         delta = self.get_opt(Module.OPT_TIMEDELTA)
@@ -60,37 +60,40 @@ class Module(AWSModule):
             paginator = client.get_paginator('lookup_events')
 
             pages = paginator.paginate(LookupAttributes=attributes, StartTime=query_start, EndTime=query_end)
-            self.print_status(f'Iterating through event pages...')
+            if self.verbose: self.print_status(f'Iterating through {region} event pages...')
 
             for page in pages:
                 events = str([e.get('CloudTrailEvent', {}) for e in page.get('Events', [])])
                 matches = findall(Module.ARN_SEARCH_REGEX, events)
                 for match in matches:
-                    arns.append(match[1])
+                    arns.add(match[1]) # tuple at index 1 is the ARN value ('"', ARN, AccountId, '"')
                     
         except Exception as err:
-            self.print_error(f'Error during cloudtrail:LookupEvents call: {err}')
-            return []
+            self.print_failure(f'Error during cloudtrail:LookupEvents call in region {region}')
+            if self.verbose: self.print_error(str(err))
+            return set()
         
-        self.print_status('Post-processing for uniqueness...')
-
         return arns
 
 
     def run(self):
-
         
-        self.print_status('Starting query for ReadOnly CloudTrail Insights events')
-        all_records = self.fetch_records(True)
+        all_records = set()
+        for region in self.get_regions():
 
-        if not self.get_opt(Module.OPT_SKIP_NONREAD):
-            self.print_status('Starting query for non-ReadOnly CloudTrail Insights events')
-            all_records.extend(self.fetch_records(False))
+            self.print_status(f'Inspecting CloudTrail events in {region}')
+            regional_records = self.fetch_records(region, True)
 
-        self.print_status('Post-processing for ARN uniqueness, this may take some time...')
-        all_records = list(set(all_records))
+            if not self.get_opt(Module.OPT_SKIP_NONREAD):
+                if self.verbose: self.print_status(f'Starting search on non-ReadOnly events in {region}')
+                regional_records = regional_records | self.fetch_records(region, False)
+
+            self.print_status(f'Found {len(regional_records)} unqiue ARN patterns in {region}')
+            all_records = all_records | regional_records # accumulate accross regions
+
 
         for arn in all_records:
+            if arn.endswith('\\\\'): arn = arn[:-2] # odd case where this is a common trailing thing 
             self.print_success(arn)
 
         return None

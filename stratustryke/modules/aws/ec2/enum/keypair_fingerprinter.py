@@ -171,7 +171,7 @@ class Module(AWSModule):
         try:
             sha256_ssh = self.openssh_sha256_fingerprint(key)
             fingerprints.append(sha256_ssh)
-            if self.verbose: self.print_status(f'OpenSSH SHA-256 (AWS Generated ED25519): {md5_spki}')
+            if self.verbose: self.print_status(f'OpenSSH SHA-256 (AWS Generated ED25519): {sha256_ssh}')
 
         except Exception as e:
             self.log_warning(f'Unable to calculate SHA-256 of key')
@@ -443,22 +443,21 @@ class Module(AWSModule):
             
 
         self.print_success(f'Keypair match found ({inst_key}): {inst_arn}')
-        if self.verbose:
-            self.print_success(f'({inst_id}) Instance state: {inst_state}')
-            self.print_success(f'({inst_id}) Instance platform: {inst_platform}')
-            self.print_success(f'({inst_id}) IAM instance profile: {inst_profile}')
-            self.print_success(f'({inst_id}) IP addresses: {", ".join(inst_ips)}')
-            self.print_success(f'({inst_id}) Security groups: {", ".join(inst_sgs)}')
+        self.print_success(f'({inst_id}) Instance state: {inst_state}')
+        self.print_success(f'({inst_id}) Instance platform: {inst_platform}')
+        self.print_success(f'({inst_id}) IAM instance profile: {inst_profile}')
+        self.print_success(f'({inst_id}) IP addresses: {", ".join(inst_ips)}')
+        self.print_success(f'({inst_id}) Security groups: {", ".join(inst_sgs)}')
 
-            if self.get_opt(Module.OPT_RESOLVE_SGS):
-                # arn:aws:ec2:<region>:<account>:instance/<instance-id>
-                region = inst_arn.split(':')[3]
-                rule_info = self.get_inbound_sg_rules(region, inst_sgs)
-                if len(rule_info) > 0:
-                    for line in rule_info:
-                        self.print_line(f'    ({inst_id}) {line}')
-                else:
-                    self.print_warning(f'({inst_id}) No rules found or error encountered when inspecting security groups')
+        if self.get_opt(Module.OPT_RESOLVE_SGS):
+            # arn:aws:ec2:<region>:<account>:instance/<instance-id>
+            region = inst_arn.split(':')[3]
+            rule_info = self.get_inbound_sg_rules(region, inst_sgs)
+            if len(rule_info) > 0:
+                for line in rule_info:
+                    self.print_line(f'    ({inst_id}) {line}')
+            else:
+                self.print_warning(f'({inst_id}) No rules found or error encountered when inspecting security groups')
 
 
     def run(self) -> None:
