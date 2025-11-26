@@ -20,8 +20,9 @@ from stratustryke.core.command import Command, command, argument
 from stratustryke.core.framework import StratustrykeFramework
 from stratustryke.core.credential.aws import AWSCredential
 from stratustryke.core.credential.microsoft import MicrosoftCredential, M365_GRAPH_TOKEN_SCOPE, AZ_MGMT_TOKEN_SCOPE
+from stratustryke.core.helper import microsoft
 from stratustryke.lib import home_dir
-
+from stratustryke.lib.regex import UUID_LOWERCASE_REGEX
 
 # === Utility functions for filesytem path completion === #
 
@@ -144,8 +145,8 @@ class InteractiveInterpreter(Command):
         intro += '     /___/\\__/_/  \\_,_/\\__/\\_,_/___/\\__/_/  \\_, /_/\\_\\__/      ' + os.linesep
         intro += '                                           /___/                ' + os.linesep
         intro += os.linesep
-        intro += f'     {stratustryke.__progname__} v{stratustryke.__version__}{os.linesep}' 
-        intro += f'     Loaded modules: {len(self.framework.modules)}{os.linesep}'
+        intro += f'     {stratustryke.__progname__} v{stratustryke.__version__}\n' 
+        intro += f'     Loaded modules: {len(self.framework.modules)}\n'
         return intro
 
     @property
@@ -201,7 +202,7 @@ class InteractiveInterpreter(Command):
     def precmd(self, line):
         if self.framework.spooler != None:
             with open(self.framework.spooler.absolute(), self.framework.spool_mode) as spooler:
-                spooler.write(f'{self.prompt}{line}{os.linesep}')
+                spooler.write(f'{self.prompt}{line}\n')
         return super().precmd(line)
 
 
@@ -246,10 +247,10 @@ class InteractiveInterpreter(Command):
     @argument('path', nargs='?', help = 'Path to change directories to')
     def do_cd(self, args):
         if not args.path:
-            self.print_line(f'Command \'cd\' requires a path{os.linesep}')
+            self.print_line(f'Command \'cd\' requires a path\n')
             return
         if not Path(args.path).is_dir():
-            self.print_line(f'Provided path \'{args.path}\' is not a directory{os.linesep}')
+            self.print_line(f'Provided path \'{args.path}\' is not a directory\n')
             return
         
         os.chdir(args.path) # cd
@@ -264,7 +265,7 @@ class InteractiveInterpreter(Command):
 
     @command('Print current working directory')
     def do_pwd(self, args):
-        self.print_line(f'{os.getcwd()}{os.linesep}')
+        self.print_line(f'{os.getcwd()}\n')
 
     
     # Command: ls
@@ -282,7 +283,7 @@ class InteractiveInterpreter(Command):
             args.path += os.sep
         path = Path(args.path)
         if not path.is_dir():
-            self.print_line(f'Provided path \'{args.path}\' is not a directory{os.linesep}')
+            self.print_line(f'Provided path \'{args.path}\' is not a directory\n')
             return
         
         if not path.is_absolute():
@@ -318,7 +319,7 @@ class InteractiveInterpreter(Command):
     @argument('file', nargs='*', help = 'File(s) to print contents of')
     def do_cat(self, args):
         if not args.file:
-            self.print_line(f'Command \'cat\' requires a file passed as an arguement{os.linesep}')
+            self.print_line(f'Command \'cat\' requires a file passed as an arguement\n')
             return
 
         for item in args.file:
@@ -329,7 +330,7 @@ class InteractiveInterpreter(Command):
                     for line in lines:
                         self.print_line(line.strip(os.linesep))
             else:
-                self.print_line(f'File \'{path}\' not found{os.linesep}')
+                self.print_line(f'File \'{path}\' not found\n')
 
     def complete_cat(self, text, line, begidx, endidx):
         return complete_path(text, files=True, dirs=True)
@@ -382,26 +383,26 @@ class InteractiveInterpreter(Command):
     def do_loglevel(self, args):
         # Check that the log handler exists
         if self.log_handler == None:
-            self.print_error(f'Framework log handler is not defined{os.linesep}')
+            self.print_error(f'Framework log handler is not defined\n')
             return
 
         levels_dict = {10: 'DEBUG', 20: 'INFO', 30: 'WARNING', 40: 'ERROR', 50: 'CRITICAL'}
         if args.level == None: # No log level specified, display the current value
             current = self.log_handler.level
             current = levels_dict.get(current, 'UNKNOWN')
-            self.print_line(f'Current effective log level threshold is: {current}{os.linesep}')
+            self.print_line(f'Current effective log level threshold is: {current}\n')
             return
 
         # New log level specified - check for validity 
         new = args.level.upper()
         new = next((level for level in ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL') if level.startswith(new)), None) # iterate through potential options
         if new == None:
-            self.print_line(f'Invalid log level \'{new}\' is not in [DEBUG, INFO, WARNING, ERROR, CRITICAL]{os.linesep}')
+            self.print_line(f'Invalid log level \'{new}\' is not in [DEBUG, INFO, WARNING, ERROR, CRITICAL]\n')
             return
 
         # Get associated int value from logging package
         self.log_handler.setLevel(getattr(logging, new))
-        self.print_line(f'Updated effective log level to logging.{new}{os.linesep}')
+        self.print_line(f'Updated effective log level to logging.{new}\n')
 
     def complete_loglevel(self, text, line, begidx, endidx):
         '''Return text completion for logging options'''
@@ -640,7 +641,7 @@ class InteractiveInterpreter(Command):
         try:
             while True:
                 line = input()
-                self.framework.spool_message(f'{line}{os.linesep}')
+                self.framework.spool_message(f'{line}\n')
                 paste += f'{line}\\n'
         except KeyboardInterrupt:
             self.framework.print_status(f'Stopped receiving paste value')
@@ -767,13 +768,13 @@ class InteractiveInterpreter(Command):
 
         # list modules in the framework
         if choice == 'modules': 
-            self.print_line(f'  Displaying framework modules...{os.linesep}')
+            self.print_line(f'  Displaying framework modules...\n')
             rows = [[module.search_name, module.desc] for module in self.framework.modules.values()]
             headers = ['Module Name', 'Description']
         
         # show framework config options
         elif choice == 'config':
-            self.print_line(f'  Framework configuration options:{os.linesep}')
+            self.print_line(f'  Framework configuration options:\n')
             rows = self.framework._config.show_options(False, False)
             headers = ['Name', 'Value', 'Required', 'Description']
         
@@ -781,7 +782,7 @@ class InteractiveInterpreter(Command):
             if self.framework.current_module == None:
                 self.print_line('No module currently selected')
                 return
-            self.print_line(f'  Module options:{os.linesep}')
+            self.print_line(f'  Module options:\n')
             masking = self.framework._config.get_val(self.framework.CONF_MASK_SENSITIVE)
             truncating = self.framework._config.get_val(self.framework.CONF_TRUNCATE_OPTIONS)
             rows = self.framework.current_module.show_options(masking, truncating)
@@ -812,7 +813,7 @@ class InteractiveInterpreter(Command):
         '''Command: 'config <action> [name] [val]' shows or sets framework config options'''
 
         if args.config_name == None:
-            self.print_line(f'{os.linesep}  Framework configuration options:{os.linesep}')
+            self.print_line(f'\n  Framework configuration options:\n')
             rows = self.framework._config.show_options(False, False)
             headers = ['Name', 'Value', 'Required', 'Description']
 
@@ -904,7 +905,7 @@ class InteractiveInterpreter(Command):
                 cred_type = self.framework.credentials.get_cred_type(cred)
                 rows.append([cred_type, entry])
             
-            self.print_line(f'Listing credentials stored for the current workspace...{os.linesep}')
+            self.print_line(f'Listing credentials stored for the current workspace...\n')
             self.framework.print_table(rows, headers, prefix='  ')
             self.print_line('')
             return
@@ -965,62 +966,69 @@ class InteractiveInterpreter(Command):
     @command('Import a credential into the framework\'s credential manager')
     @argument('cred_type', metavar='type', choices=('aws', 'amazon', 'az', 'azure', 'm365', 'token', 'generic'), help = 'Type of credential to import')
     @argument('cred_alias', metavar='alias', help = 'Alias name for the credential to import (must be unique amongst cred aliases)')
-    @argument('workspace', default=settings.DEFAULT_WORKSPACE, nargs='?', help = f'Workspace to import the credential into [default: \'{settings.DEFAULT_WORKSPACE}]\'')
+    # @argument('workspace', default=settings.DEFAULT_WORKSPACE, nargs='?', help = f'Workspace to import the credential into [default: \'{settings.DEFAULT_WORKSPACE}]\'') # Not really being used...
     def do_mkcred(self, args):
        
        # AWS principal creds (access keys)
         if args.cred_type in ['aws', 'amazon']:
 
             access_key = input('  AWS Access Key Id: ')
-            self.framework.spool_message(f'  AWS Access Key Id: {access_key}{os.linesep}')
+            self.framework.spool_message(f'  AWS Access Key Id: {access_key}\n')
             secret_key = input('  AWS Secret Access Key: ')
-            self.framework.spool_message(f'  AWS Secret Access Key: <REDACTED>{os.linesep}')
+            self.framework.spool_message(f'  AWS Secret Access Key: <REDACTED>\n')
 
             if access_key.startswith('AKIA'): session_token = None
             else:
                 session_token = input('  AWS Session Token [None]: ')
-                self.framework.spool_message(f'  AWS Session Token: {session_token}{os.linesep}')
+                self.framework.spool_message(f'  AWS Session Token: {session_token}\n')
             
             region = input(f'  Default AWS Region [{settings.AWS_DEFAULT_REGION}]: ')
-            self.framework.spool_message(f'  Default AWS Region [{settings.AWS_DEFAULT_REGION}]: {region}{os.linesep}')
+            self.framework.spool_message(f'  Default AWS Region [{settings.AWS_DEFAULT_REGION}]: {region}\n')
             if region == '': region = settings.AWS_DEFAULT_REGION
 
             # First None val passed is for account id (to be deprecated in place of a property derived from GetCallerIdentity)
             # Second None val is for ARN (also to be deprecated and replaced with property derived from GetCallerIdentity)
-            cred = AWSCredential(args.cred_alias, args.workspace, False, None, access_key, access_key, secret_key, session_token, region, None)
+            cred = AWSCredential(args.cred_alias, access_key=access_key, secret_key=secret_key, session_token=session_token, default_region=region)
             self.framework.credentials.store_credential(cred)
 
 
         # Microsft / M365 / Azure Credential (for microsoft graph)
-        elif args.cred_type in ['az', 'azure', 'm365']:
-            tenant = input('  Tenant Id [default]: ').strip()
-            if tenant == '': tenant = None
-            
+        elif args.cred_type in ['az', 'azure', 'm365', 'microsoft']:
             principal = input('  Principal Name [interactive]: ').strip()
-            self.framework.spool_message(f'Principal Name [interactive]: {principal}{os.linesep}')
+            self.framework.spool_message(f'Principal Name [interactive]: {principal}\n')
+        
+
 
             if principal == '' or principal == None:
                 self.framework.spool_message('Starting interactive authentication...')
-                cred = MicrosoftCredential(args.cred_alias, args.workspace, tenant=tenant, interactive=True)
-                cred.store_token()
+                cred = MicrosoftCredential(args.cred_alias, args.workspace, interactive=True)
+                cred.get_refresh_token()
 
             else:
-                if regex_match('^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', principal):    
-                    self.framework.spool_message(f'  Detected appication service principal (UUID){os.linesep}')
-                    secret = input('  Application Client Secret: ')
-                    self.framework.spool_message(f'  Application Client Secret: <REDACTED>{os.linesep}')
-                
-                elif '@' in principal:
-                    self.framework.spool_message(f'  Detected liekly user principal (email address){os.linesep}')
-                    secret = input('  Prinicpal Authentication Secret: ')
-                    self.framework.spool_message(f'  Principal Authentication Secret: <REDACTED>{os.linesep}')
+                principal = principal.lower()
+                if UUID_LOWERCASE_REGEX.match(principal):    
+                    self.framework.spool_message(f'  Detected appication service principal (UUID)\n')
+
+                    tenant = input('  Tenant Id: ').strip()
+                    if tenant == '':
+                        self.framework.print_error(f'Tenant id is required for service principal authentication')
+                        return None
+                    if not UUID_LOWERCASE_REGEX.match(tenant.lower()):
+                        self.framework.print_error(f'Tenant id must be a UUID')
+                        return None
+
+                    secret = input('  Certificate Path or Client Secret: ')
+                    self.framework.spool_message(f'  Application Secret: <REDACTED>\n')
+
+                    # Get key PEM if a path was give, else it will just be the secret key string value
+                    if Path(secret).exists() and Path(secret).is_file():
+                        with open(secret, 'r') as file: secret = file.read()
 
                 else:
-                    self.framework.print_error('User principals must be supplied as full email addresses')
+                    self.framework.print_error('Service principal name should be a UUID')
                     return None
                 
-                scope = M365_GRAPH_TOKEN_SCOPE if (args.cred_type == 'm365') else AZ_MGMT_TOKEN_SCOPE
-                cred = MicrosoftCredential(args.cred_alias, args.workspace, tenant=tenant, principal=principal, secret=secret, token_scope=scope)
+                cred = MicrosoftCredential(args.cred_alias, interactive=False, tenant=tenant, principal=principal, secret=secret)
                 
                 try:
                     token = cred.access_token()
@@ -1035,7 +1043,7 @@ class InteractiveInterpreter(Command):
 
         
         else: # Not a support cred type? But somehow was in the 
-            self.framework.print_warning(f'Credential type \'{args.cred_type}\' not currently supported')
+            self.framework.print_warning(f'Credential type \'{args.cred_type}\' is not supported')
 
         return
     
@@ -1044,7 +1052,7 @@ class InteractiveInterpreter(Command):
         split = line.split()
 
         if len(split) < 3: # just 'mkcred' or 'mkcred abc'
-            completions.extend([i for i in ['aws', 'azure', 'gcp', 'generic'] if i.startswith(text.lower())])
+            completions.extend([i for i in ['aws', 'azure', 'gcp', 'microsoft', 'generic'] if i.startswith(text.lower())])
 
         return completions
 
@@ -1116,11 +1124,11 @@ class InteractiveInterpreter(Command):
             self.print_status('Validating module options')
             valid, msg = self.framework.current_module.validate_options()
             if not valid:
-                self.print_error(f'{msg}{os.linesep}')
+                self.print_error(f'{msg}\n')
                 return
-            self.print_status(f'Module options passed validation{os.linesep}')
+            self.print_status(f'Module options passed validation\n')
         
-        self.print_status(f'Running module...{os.linesep}')
+        self.print_status(f'Running module...\n')
 
         try:
             res = self.framework.current_module.run()
