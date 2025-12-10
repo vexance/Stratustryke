@@ -10,9 +10,6 @@ from stratustryke.lib import StratustrykeException
 from stratustryke.lib.regex import UUID_LOWERCASE_REGEX
 
 
-
-
-
 class MicrosoftCredential(CloudCredential):
 
     CREDENTIAL_TYPE = 'MSFT'
@@ -59,9 +56,6 @@ class MicrosoftCredential(CloudCredential):
 
     def get_refresh_token(self) -> str:
         if self._refresh_token: return self._refresh_token
-
-
-
 
 
     def access_token(self, scope: str = None) -> str:

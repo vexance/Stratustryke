@@ -1,8 +1,8 @@
 
 
 from stratustryke.core.module.azure import AzureModule, AZ_MGMT_REST_URL
-from stratustryke.core.credential.microsoft import AZ_MGMT_TOKEN_SCOPE
-from stratustryke.lib import module_data_dir
+from stratustryke.core.credential.microsoft import MicrosoftCredential
+
 
 class Module(AzureModule):
     def __init__(self, framework) -> None:

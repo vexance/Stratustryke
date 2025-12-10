@@ -11,6 +11,8 @@ import tabulate
 import os
 
 from termcolor import colored
+from requests import request, Response
+from http.client import responses as httpresponses
 
 from stratustryke.core.credstore import CredentialStoreConnector
 from stratustryke.core.module import StratustrykeModule
@@ -18,6 +20,7 @@ from stratustryke.core.option import Options
 from stratustryke.core.fireprox import FireProx
 from stratustryke.core.modmgr import ModManager
 from stratustryke import lib, settings
+from stratustryke import __version__
 
 
 class StratustrykeFramework(object):
@@ -106,7 +109,22 @@ class StratustrykeFramework(object):
 
 
     def __repr__(self) -> str:
-        return f'<{self.__class__.__name__} LoadedModules={len(self.modules)} Version=\'stratustryke v{stratustryke.__version__}\'>'
+        return f'<{self.__class__.__name__} LoadedModules={len(self.modules)} Version=\'stratustryke v{__version__}\'>'
+
+    @property
+    def web_proxies(self) -> dict:
+        valid, msg = self.framework._config.get_opt(self.framework.CONF_HTTP_PROXY).validate()
+        if not valid:
+            raise lib.StratustrykeException(msg)
+
+        proxy = self._config.get_val(self.framework.CONF_HTTP_PROXY)
+        if proxy in ['', None]:
+            return {}
+        
+        return {
+            'http': proxy,
+            'https': proxy
+        }
 
 
     def spool_message(self, msg: str) -> None:
@@ -186,6 +204,78 @@ class StratustrykeFramework(object):
     def get_module_logger(self, mod_name: str) -> logging.Logger:
         '''Returns a logger for each module'''
         return logging.getLogger(f'stratustryke.module.{mod_name}')
+    
+
+    def http_request(self, method: str, url: str, **kwargs) -> Response:
+        '''
+        Wraps requests.request() while enforcing framework proxy / TLS verification configs\n
+        :param method: (str) request method (e.g., GET, POST, PUT, etc)
+        :param url: (str) URL for the request
+        :param data: (str) non-json request body data
+        :param json: (str) JSON request body data
+        :param auth: (any) authentication. Support Sigv4
+        :param module_name (str): name of the module initating the request
+        '''
+        proxies = kwargs.get('proxies', self.web_proxies)
+        verify = kwargs.get('verify', self._config.get_val(StratustrykeFramework.CONF_HTTP_VERIFY_SSL))
+        data = kwargs.get('data', None)
+        auth = kwargs.get('auth', None)
+        json = kwargs.get('json', None)
+        headers = kwargs.get('headers', {})
+        module_name = kwargs.get('module_name', 'StratustrykeFramework')
+        if self.framework._config.get_val(StratustrykeFramework.CONF_HTTP_STSK_HEADER):
+            headers.update({'X-Stratustryke-Module': f'{module_name}'})
+
+        if method == 'GET': json, data = None, None # Ensure GET requests don't contain request body
+        try:
+            res = request(method, url, verify=verify, proxies=proxies, data=data, headers=headers, auth=auth, json=json)
+            
+            # res = request(method, url, verify=verify, proxies=proxies, params=params, data=data, headers=headers, cookies=cookies, auth=auth,
+            #               files=files, timeout=timeout, allow_redirects=allow_redirects, hooks=hooks, stream=stream, cert=cert, json=json)
+        except Exception as err:
+            self.print_error(f'Exception thrown ({type(err).__name__}) during HTTP/S request: {err}')
+            self.framework._logger.error(f'Exception thrown ({type(err).__name__}) during HTTP/S request: {err}')
+            return None
+        
+        return res
+
+
+    def http_record(self, response: Response, outfile: str = None) -> list:
+        '''Returns a list[str] containing raw HTTP request / response content. If ourfile is specified, will (over)write the lines to the file
+        :param response: requests.Response object from a HTTP request
+        :param outfile: string path to an output file to create. Overwrites if already existing.
+        :return: list[str] containing raw HTTP request / response content'''
+        lines = []
+        request = response.request
+        
+        # Get raw request content
+        url_path = request.url.split('/')[3:] # strip http: / / host&quthority /
+        lines.append(f'{request.method} /{"".join(url_path)} HTTP/1.1\n') # requests supports HTTP/1.1
+        lines.extend([f'{key}: {request.headers[key]}\n' for key in request.headers])
+        lines.append(f'\n')
+
+        if request.body == None: lines.append(f'\n')
+        else: 
+            if isinstance(request.body, bytes):
+                request.body = request.body.decode()
+            lines.append(f'{request.body}\n')
+        lines.append(f'\n\n')
+
+        # Get raw response content
+        status_description = httpresponses.get(response.status_code, 'UNKNOWN_STATUS_CODE')
+        lines.append(f'HTTP/1.1 {response.status_code} {status_description}\n')
+        lines.extend([f'{key}: {response.headers[key]}\n' for key in response.headers])
+        lines.append(f'\n')
+        if response.text == None: lines.append(f'\n')
+        else: lines.append(f'{response.text}\n')
+        lines.append(f'\n\n')
+
+        if outfile != None:
+            self.framework._logger.info(f'Recording HTTP request/response to {outfile}')
+            with open(outfile, 'w') as file:
+                file.writelines(lines)
+
+        return lines
 
     # === Module load / reload === #
 
@@ -229,7 +319,7 @@ class StratustrykeFramework(object):
         if not isinstance(instance, StratustrykeModule): # Modules must inherit StratustrykeModule
             self._logger.error(f'Module: \'{mod_path}\' does not inherit from stratustryke.core.module.StratustrykeModule class')
             raise lib.FrameworkRuntimeError(f'Module: \'{mod_path}\' does not inherit from stratustryke.core.module.StratustrykeModule class')
-        if not isinstance(instance._options, stratustryke.core.option.Options): # options must be of Options class
+        if not isinstance(instance._options, Options): # options must be of Options class
             self._logger.error(f'Module: \'{mod_path}\' options are not of stratustryke.core.option.Options class')
             raise lib.FrameworkRuntimeError(f'Module: \'{mod_path}\' options are not of stratustryke.core.option.Options class')
         if not(instance._info.get('Authors', False) and instance._info.get('Details', False) and instance._info.get('References', False) and (instance.desc != False)): # Modules must specify this info

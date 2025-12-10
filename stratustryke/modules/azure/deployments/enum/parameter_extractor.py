@@ -3,7 +3,7 @@ import json
 
 from pathlib import Path
 
-from stratustryke.core.credential.microsoft import AZ_MGMT_TOKEN_SCOPE
+from stratustryke.core.credential.microsoft import MicrosoftCredential
 from stratustryke.core.module.azure import AzureModule
 from stratustryke.lib import module_data_dir
 
@@ -192,7 +192,7 @@ class Module(AzureModule):
 
     def run(self) -> None:
         
-        self.auth_token = self.get_cred().access_token(scope=AZ_MGMT_TOKEN_SCOPE)
+        self.auth_token = self.get_cred().access_token(scope=MicrosoftCredential.AZ_MGMT_TOKEN_SCOPE)
         subscriptions = self.get_opt_az_subscription()
 
         self.print_status(f'Attempting to retrieve tenant-level deployment parameters...')

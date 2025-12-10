@@ -19,7 +19,7 @@ from stratustryke.core.command import Command, command, argument
 # import stratustryke.core.command
 from stratustryke.core.framework import StratustrykeFramework
 from stratustryke.core.credential.aws import AWSCredential
-from stratustryke.core.credential.microsoft import MicrosoftCredential, M365_GRAPH_TOKEN_SCOPE, AZ_MGMT_TOKEN_SCOPE
+from stratustryke.core.credential.microsoft import MicrosoftCredential
 from stratustryke.core.helper import microsoft
 from stratustryke.lib import home_dir
 from stratustryke.lib.regex import UUID_LOWERCASE_REGEX

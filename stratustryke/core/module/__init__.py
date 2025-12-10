@@ -160,27 +160,7 @@ class StratustrykeModule(object):
         :param json: (str) JSON request body data
         :param auth: (any) authentication. Support Sigv4
         '''
-        proxies = kwargs.get('proxies', self.web_proxies)
-        verify = kwargs.get('verify', self.framework._config.get_val(self.framework.CONF_HTTP_VERIFY_SSL))
-        data = kwargs.get('data', None)
-        auth = kwargs.get('auth', None)
-        json = kwargs.get('json', None)
-        headers = kwargs.get('headers', {})
-        if self.framework._config.get_val(self.framework.CONF_HTTP_STSK_HEADER):
-            headers.update({'X-Stratustryke-Module': f'{self.search_name}'})
-
-        if method == 'GET': json, data = None, None # Ensure GET requests don't contain request body
-        try:
-            res = request(method, url, verify=verify, proxies=proxies, data=data, headers=headers, auth=auth, json=json)
-            
-            # res = request(method, url, verify=verify, proxies=proxies, params=params, data=data, headers=headers, cookies=cookies, auth=auth,
-            #               files=files, timeout=timeout, allow_redirects=allow_redirects, hooks=hooks, stream=stream, cert=cert, json=json)
-        except Exception as err:
-            self.print_error(f'Exception thrown ({type(err).__name__}) during HTTP/S request: {err}')
-            self.framework._logger.error(f'Exception thrown ({type(err).__name__}) during HTTP/S request: {err}')
-            return None
-        
-        return res
+        return self.framework.http_request(**kwargs)
 
 
     def http_record(self, response: Response, outfile: str = None) -> list:
