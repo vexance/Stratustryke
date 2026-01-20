@@ -35,7 +35,7 @@ class Module(AWSModule):
         self._info = {
             'Authors': ['@vexance'],
             'Description': 'Deploy a Cloudformation stack which creates a backdoor IAM role',
-            'Details': 'Uses cloudformation:CreateStack to create an IAM role ',
+            'Details': 'Uses cloudformation:CreateStack and iam:PassRole to create an IAM role using the passed role permissions',
             'References': [ '' ]
         }
 

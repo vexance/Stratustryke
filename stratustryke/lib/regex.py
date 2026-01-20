@@ -14,6 +14,13 @@ AWS_PRINCIPAL_ARN_REGEX = compile(
     r'(?:(?P<principal_type>role|user|federated)/(?P<name>[A-Za-z0-9+=,.@_\-\/]+)|root)'
 )
 
+AWS_IDENTITY_ARN_REGEX = compile(
+    r'arn:(?P<partition>aws[a-zA-Z-]*)?:iam::'
+    r'(?P<account_id>\d{12}):'
+    r'(?:(?P<principal_type>role|user|group)/(?P<name>[A-Za-z0-9+=,.@_\-\/]+)|root)'
+)
+
+
 AWS_SERVICE_PRINCIPAL_REGEX = compile(
     r'(?P<service>[a-z0-9-]+(\.[a-z0-9-]+)*)\.amazonaws\.com(\.cn)?'
 )
