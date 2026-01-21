@@ -76,7 +76,7 @@ class Module(AWSModule):
     def run(self):
         cred = self.get_cred()
         workspace = self.get_opt(Module.OPT_WORKSPACE)
-        ext_id = self.get_opt(Module.OPT_EXTERNAL_ID)
+        ext_id = self.get_opt(Module.OPT_EXTERNAL_ID) or 'stratustryke'
         duration = self.get_opt(Module.OPT_DURATION)
         session_name = self.get_opt(Module.OPT_SESSION_NAME)
         region = self.get_opt(Module.OPT_AWS_REGION) # In this case we want to actually preserve __DEFAULT__
@@ -98,9 +98,9 @@ class Module(AWSModule):
                 if self.verbose: # print creds to be copy/pasted into env vars
                     env_prefix = 'export ' if on_linux else '$Env:'
 
-                    self.print_line(f'{env_prefix}AWS_ACCESS_KEY_ID={assumed_role_cred._access_key_id}')
-                    self.print_line(f'{env_prefix}AWS_SECRET_ACCESS_KEY={assumed_role_cred._secret_key}')
-                    self.print_line(f'{env_prefix}AWS_SESSION_TOKEN={assumed_role_cred._session_token}')
+                    self.print_line(f' {env_prefix}AWS_ACCESS_KEY_ID={assumed_role_cred._access_key_id}')
+                    self.print_line(f' {env_prefix}AWS_SECRET_ACCESS_KEY={assumed_role_cred._secret_key}')
+                    self.print_line(f' {env_prefix}AWS_SESSION_TOKEN={assumed_role_cred._session_token}')
                 
             except Exception as err:
                 self.print_failure(f'Failed to sts:AssumeRole on {arn}')
