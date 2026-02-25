@@ -5,24 +5,40 @@
 import importlib
 import logging
 import logging.handlers
-import stratustryke.core.lib
 import pathlib
 import sys
-import stratustryke
+import tabulate
+import os
+
+from termcolor import colored
+from requests import request, Response
+from http.client import responses as httpresponses
+
 from stratustryke.core.credstore import CredentialStoreConnector
 from stratustryke.core.module import StratustrykeModule
 from stratustryke.core.option import Options
 from stratustryke.core.fireprox import FireProx
-import stratustryke.core.modmgr
-import stratustryke.settings
-from termcolor import colored
-import tabulate
-import os
+from stratustryke.core.modmgr import ModManager
+from stratustryke import lib, settings
+from stratustryke import __version__
+
 
 class StratustrykeFramework(object):
     '''
     Main instance of the framework which handles configurations, loaded modules, passes input between CLI and modules, and handles terminal / file output
     '''
+
+    CONF_MASK_SENSITIVE = 'MASK_SENSITIVE'
+    CONF_COLORED_OUTPUT = 'COLORED_OUTPUT'
+    CONF_FORCE_VALIDATE_OPTIONS = 'FORCE_VALIDATE_OPTIONS'
+    CONF_SPOOL_OVERWRITE = 'SPOOL_OVERWRITE'
+    CONF_TRUNCATE_OPTIONS = 'TRUNCATE_OPTIONS'
+    CONF_FIREPROX_CRED_ALIAS = 'FIREPROX_CRED_ALIAS'
+    CONF_DEFAULT_TABLE_FORMAT = 'DEFAULT_TABLE_FORMAT'
+    CONF_WORKSPACE = 'WORKSPACE'
+    CONF_HTTP_PROXY = 'HTTP_PROXY'
+    CONF_HTTP_VERIFY_SSL = 'HTTP_VERIFY_SSL'
+    CONF_HTTP_STSK_HEADER = 'HTTP_STSK_HEADER'
 
     def __init__(self, stdout = None):
         # Package info
@@ -31,15 +47,15 @@ class StratustrykeFramework(object):
 
         # stdout and install / user data dirs
         self._stdout = sys.stdout if (stdout == None) else stdout
-        self._user_data_dir = stratustryke.core.lib.home_dir()
-        self._install_dir = stratustryke.core.lib.stratustryke_dir()
+        self._user_data_dir = lib.home_dir()
+        self._install_dir = lib.stratustryke_dir()
 
         # Logging setup
         self._logger = logging.getLogger('stratustryke.framework')
         tmp_path = str(pathlib.Path(self._user_data_dir/self.__package__).absolute())
         os.makedirs(tmp_path, exist_ok=True)
 
-        raw_loglevel = stratustryke.settings.STRATUSTRYKE_LOGLEVEL
+        raw_loglevel = settings.STRATUSTRYKE_LOGLEVEL
         loglevel = logging.INFO # Default to info if not designated in settings (or invalid val in settings)
         if raw_loglevel == 'DEBUG':  loglevel = logging.DEBUG
         elif raw_loglevel == 'INFO': loglevel = logging.INFO
@@ -54,23 +70,23 @@ class StratustrykeFramework(object):
 
         # Framework options
         self._config = Options()
-        self._config.add_boolean('MASK_SENSITIVE', 'Configure masking of sensitive option values in module options display', True, stratustryke.settings.MASK_SENSITIVE_OPTIONS)
-        self._config.add_boolean('COLORED_OUTPUT', 'Enables color in console output', True, stratustryke.settings.COLORED_OUTPUT)
-        self._config.add_boolean('FORCE_VALIDATE_OPTIONS', 'Enables validation checks on module options upon running the module', True, stratustryke.settings.FORCE_VALIDATE_OPTIONS)
-        self._config.add_boolean('SPOOL_OVERWRITE', 'Enables spool file overwrite and disables default writing mode (append) for file spooling ops', True, stratustryke.settings.SPOOL_OVERWRITE)
-        self._config.add_boolean('TRUNCATE_OPTIONS', 'Enables / disables truncation of long option values to avoid line-breaks in terminal', True, stratustryke.settings.TRUNCATE_OPTIONS)
-        self._config.add_string('FIREPROX_CRED_ALIAS', 'Credential alias to use for management of fireprox APIs', True, stratustryke.settings.FIREPROX_CRED_ALIAS)
-        self._config.add_string('DEFAULT_TABLE_FORMAT', 'Default outputing format for table output', True, stratustryke.settings.DEFAULT_TABLE_FORMAT)
-        self._config.add_string('WORKSPACE', 'Workspace to filter credential objects in the stratustryke sqlite credstore', True, stratustryke.settings.DEFAULT_WORKSPACE)
-        self._config.add_string('HTTP_PROXY', 'Proxy (schema://host:port) for modules to use as an HTTP/S proxy for web traffic', False, None, '(http[s]?|socks[45][h]?)[:]\\/\\/.*[:][0-9]{1,5}')
-        self._config.add_boolean('HTTP_VERIFY_SSL', 'Enable or disable SSL/TLS verification when modules perform manual HTTP requests', True, stratustryke.settings.HTTP_VERIFY_SSL)
-        self._config.add_boolean('HTTP_STSK_HEADER', 'Enable / disable submission of X-Stratustryke-Header for custom HTTP requests', True, stratustryke.settings.HTTP_STSK_HEADER)
+        self._config.add_boolean(StratustrykeFramework.CONF_MASK_SENSITIVE, 'Configure masking of sensitive option values in module options display', True, settings.MASK_SENSITIVE_OPTIONS)
+        self._config.add_boolean(StratustrykeFramework.CONF_COLORED_OUTPUT, 'Enables color in console output', True, settings.COLORED_OUTPUT)
+        self._config.add_boolean(StratustrykeFramework.CONF_FORCE_VALIDATE_OPTIONS, 'Enables validation checks on module options upon running the module', True, settings.FORCE_VALIDATE_OPTIONS)
+        self._config.add_boolean(StratustrykeFramework.CONF_SPOOL_OVERWRITE, 'Enables spool file overwrite and disables default writing mode (append) for file spooling ops', True, settings.SPOOL_OVERWRITE)
+        self._config.add_boolean(StratustrykeFramework.CONF_TRUNCATE_OPTIONS, 'Enables / disables truncation of long option values to avoid line-breaks in terminal', True, settings.TRUNCATE_OPTIONS)
+        self._config.add_string(StratustrykeFramework.CONF_FIREPROX_CRED_ALIAS, 'Credential alias to use for management of fireprox APIs', True, settings.FIREPROX_CRED_ALIAS)
+        self._config.add_string(StratustrykeFramework.CONF_DEFAULT_TABLE_FORMAT, 'Default outputing format for table output', True, settings.DEFAULT_TABLE_FORMAT)
+        self._config.add_string(StratustrykeFramework.CONF_WORKSPACE, 'Workspace to filter credential objects in the stratustryke sqlite credstore', True, settings.DEFAULT_WORKSPACE)
+        self._config.add_string(StratustrykeFramework.CONF_HTTP_PROXY, 'Proxy (schema://host:port) for modules to use as an HTTP/S proxy for web traffic', False, None, '(http[s]?|socks[45][h]?)[:]\\/\\/.*[:][0-9]{1,5}')
+        self._config.add_boolean(StratustrykeFramework.CONF_HTTP_VERIFY_SSL, 'Enable or disable SSL/TLS verification when modules perform manual HTTP requests', True, settings.HTTP_VERIFY_SSL)
+        self._config.add_boolean(StratustrykeFramework.CONF_HTTP_STSK_HEADER, 'Enable / disable submission of X-Stratustryke-Header for custom HTTP requests', True, settings.HTTP_STSK_HEADER)
 
         # Load modules into framework - get modules dir and all directories below it
         self.current_module = None
 
         search_dirs = []
-        builtin_modules_dir = (stratustryke.core.lib.stratustryke_dir()/'modules').absolute()
+        builtin_modules_dir = (lib.stratustryke_dir()/'modules').absolute()
         for directory in builtin_modules_dir.glob('**/'):
             path = str(directory)
             if not path.endswith('__pycache__'):
@@ -78,9 +94,9 @@ class StratustrykeFramework(object):
 
         self.spooler = None # Will hold the I/O handle
         self.spool_mode = None
-        self.credentials = CredentialStoreConnector(self, str(stratustryke.core.lib.sqlite_filepath()))
+        self.credentials = CredentialStoreConnector(self, str(lib.sqlite_filepath()))
         
-        fp_alias = self._config.get_opt('FIREPROX_CRED_ALIAS')._value
+        fp_alias = self._config.get_opt(StratustrykeFramework.CONF_FIREPROX_CRED_ALIAS)._value
         if fp_alias in self.credentials.keys():
             fp_cred = self.credentials[fp_alias]
             self.fireprox = FireProx(fp_cred)
@@ -88,12 +104,27 @@ class StratustrykeFramework(object):
             self.print_warning(f'Fireprox manager credential alias \'{fp_alias}\' not found!')
             self.fireprox = None
 
-        self.modules = stratustryke.core.modmgr.ModManager(self, search_dirs)
+        self.modules = ModManager(self, search_dirs)
         self._logger.info(f'Loaded {len(self.modules)} modules into the framework')
 
 
     def __repr__(self) -> str:
-        return f'<{self.__class__.__name__} LoadedModules={len(self.modules)} Version=\'stratustryke v{stratustryke.__version__}\'>'
+        return f'<{self.__class__.__name__} LoadedModules={len(self.modules)} Version=\'stratustryke v{__version__}\'>'
+
+    @property
+    def web_proxies(self) -> dict:
+        valid, msg = self.framework._config.get_opt(self.framework.CONF_HTTP_PROXY).validate()
+        if not valid:
+            raise lib.StratustrykeException(msg)
+
+        proxy = self._config.get_val(self.framework.CONF_HTTP_PROXY)
+        if proxy in ['', None]:
+            return {}
+        
+        return {
+            'http': proxy,
+            'https': proxy
+        }
 
 
     def spool_message(self, msg: str) -> None:
@@ -105,7 +136,7 @@ class StratustrykeFramework(object):
     # === various logging and print utility methods === #
     def print_error(self, msg: str) -> None:
         '''Prints (magenta) error message: [x] {msg}'''
-        use_color = self._config.get_val('COLORED_OUTPUT')
+        use_color = self._config.get_val(StratustrykeFramework.CONF_COLORED_OUTPUT)
         prefix = colored('[x]', 'magenta', attrs=('bold',)) if use_color else '[x]'
         output = f'{prefix} {msg}{os.linesep}'
 
@@ -118,7 +149,7 @@ class StratustrykeFramework(object):
 
     def print_status(self, msg: str) -> None:
         '''Prints (blue) status message: [*] {msg}'''
-        use_color = self._config.get_val('COLORED_OUTPUT')
+        use_color = self._config.get_val(StratustrykeFramework.CONF_COLORED_OUTPUT)
         prefix = colored('[*]', 'blue', attrs=('bold',)) if use_color else '[*]'
         output = f'{prefix} {msg}{os.linesep}'
 
@@ -129,7 +160,7 @@ class StratustrykeFramework(object):
 
     def print_warning(self, msg: str) -> None:
         '''Prints (yellow) warning message: [!] {msg}'''
-        use_color = self._config.get_val('COLORED_OUTPUT')
+        use_color = self._config.get_val(StratustrykeFramework.CONF_COLORED_OUTPUT)
         prefix = colored('[!]', 'yellow', attrs=('bold',)) if use_color else '[!]'
         output = f'{prefix} {msg}{os.linesep}'
 
@@ -141,7 +172,7 @@ class StratustrykeFramework(object):
 
     def print_success(self, msg: str) -> None:
         '''Prints (green) success message: [+] {msg}'''
-        use_color = self._config.get_val('COLORED_OUTPUT')
+        use_color = self._config.get_val(StratustrykeFramework.CONF_COLORED_OUTPUT)
         prefix = colored('[+]', 'green', attrs=('bold',)) if use_color else '[+] '
         output = f'{prefix} {msg}{os.linesep}'
         
@@ -152,7 +183,7 @@ class StratustrykeFramework(object):
 
     def print_failure(self, msg: str) -> None:
         '''Prints (red) failure (not error!) message: [-] {msg}'''
-        use_color = self._config.get_val('COLORED_OUTPUT')
+        use_color = self._config.get_val(StratustrykeFramework.CONF_COLORED_OUTPUT)
         prefix = colored('[-]', 'red', attrs=('bold',)) if use_color else '[-] '
         output = f'{prefix} {msg}{os.linesep}'
         
@@ -173,6 +204,78 @@ class StratustrykeFramework(object):
     def get_module_logger(self, mod_name: str) -> logging.Logger:
         '''Returns a logger for each module'''
         return logging.getLogger(f'stratustryke.module.{mod_name}')
+    
+
+    def http_request(self, method: str, url: str, **kwargs) -> Response:
+        '''
+        Wraps requests.request() while enforcing framework proxy / TLS verification configs\n
+        :param method: (str) request method (e.g., GET, POST, PUT, etc)
+        :param url: (str) URL for the request
+        :param data: (str) non-json request body data
+        :param json: (str) JSON request body data
+        :param auth: (any) authentication. Support Sigv4
+        :param module_name (str): name of the module initating the request
+        '''
+        proxies = kwargs.get('proxies', self.web_proxies)
+        verify = kwargs.get('verify', self._config.get_val(StratustrykeFramework.CONF_HTTP_VERIFY_SSL))
+        data = kwargs.get('data', None)
+        auth = kwargs.get('auth', None)
+        json = kwargs.get('json', None)
+        headers = kwargs.get('headers', {})
+        module_name = kwargs.get('module_name', 'StratustrykeFramework')
+        if self.framework._config.get_val(StratustrykeFramework.CONF_HTTP_STSK_HEADER):
+            headers.update({'X-Stratustryke-Module': f'{module_name}'})
+
+        if method == 'GET': json, data = None, None # Ensure GET requests don't contain request body
+        try:
+            res = request(method, url, verify=verify, proxies=proxies, data=data, headers=headers, auth=auth, json=json)
+            
+            # res = request(method, url, verify=verify, proxies=proxies, params=params, data=data, headers=headers, cookies=cookies, auth=auth,
+            #               files=files, timeout=timeout, allow_redirects=allow_redirects, hooks=hooks, stream=stream, cert=cert, json=json)
+        except Exception as err:
+            self.print_error(f'Exception thrown ({type(err).__name__}) during HTTP/S request: {err}')
+            self.framework._logger.error(f'Exception thrown ({type(err).__name__}) during HTTP/S request: {err}')
+            return None
+        
+        return res
+
+
+    def http_record(self, response: Response, outfile: str = None) -> list:
+        '''Returns a list[str] containing raw HTTP request / response content. If ourfile is specified, will (over)write the lines to the file
+        :param response: requests.Response object from a HTTP request
+        :param outfile: string path to an output file to create. Overwrites if already existing.
+        :return: list[str] containing raw HTTP request / response content'''
+        lines = []
+        request = response.request
+        
+        # Get raw request content
+        url_path = request.url.split('/')[3:] # strip http: / / host&quthority /
+        lines.append(f'{request.method} /{"".join(url_path)} HTTP/1.1\n') # requests supports HTTP/1.1
+        lines.extend([f'{key}: {request.headers[key]}\n' for key in request.headers])
+        lines.append(f'\n')
+
+        if request.body == None: lines.append(f'\n')
+        else: 
+            if isinstance(request.body, bytes):
+                request.body = request.body.decode()
+            lines.append(f'{request.body}\n')
+        lines.append(f'\n\n')
+
+        # Get raw response content
+        status_description = httpresponses.get(response.status_code, 'UNKNOWN_STATUS_CODE')
+        lines.append(f'HTTP/1.1 {response.status_code} {status_description}\n')
+        lines.extend([f'{key}: {response.headers[key]}\n' for key in response.headers])
+        lines.append(f'\n')
+        if response.text == None: lines.append(f'\n')
+        else: lines.append(f'{response.text}\n')
+        lines.append(f'\n\n')
+
+        if outfile != None:
+            self.framework._logger.info(f'Recording HTTP request/response to {outfile}')
+            with open(outfile, 'w') as file:
+                file.writelines(lines)
+
+        return lines
 
     # === Module load / reload === #
 
@@ -187,7 +290,7 @@ class StratustrykeFramework(object):
             instance = module.Module(self)
         except Exception as err:
             self._logger.error(f'Failed to load module: \'{mod_path}\'', exc_info=True)
-            raise stratustryke.core.lib.FrameworkRuntimeError(f'Failed to load module: \'{mod_path}\'')
+            raise lib.FrameworkRuntimeError(f'Failed to load module: \'{mod_path}\'')
 
         return instance
 
@@ -207,7 +310,7 @@ class StratustrykeFramework(object):
         # Ensure module requested for reload is already loaded
         if mod_path not in self.modules:
             self._logger.error(f'Invalid module \'{mod_path}\' requested for reload while not in framework')
-            raise stratustryke.core.lib.FrameworkRuntimeError(f'Invalid module: \'{mod_path}\' requested for reload')
+            raise lib.FrameworkRuntimeError(f'Invalid module: \'{mod_path}\' requested for reload')
 
         self._logger.info(f'Reloading \'{mod_path}\' module')
 
@@ -215,16 +318,16 @@ class StratustrykeFramework(object):
         # Ensure Module class instance has required attributes
         if not isinstance(instance, StratustrykeModule): # Modules must inherit StratustrykeModule
             self._logger.error(f'Module: \'{mod_path}\' does not inherit from stratustryke.core.module.StratustrykeModule class')
-            raise stratustryke.core.lib.FrameworkRuntimeError(f'Module: \'{mod_path}\' does not inherit from stratustryke.core.module.StratustrykeModule class')
-        if not isinstance(instance._options, stratustryke.core.option.Options): # options must be of Options class
+            raise lib.FrameworkRuntimeError(f'Module: \'{mod_path}\' does not inherit from stratustryke.core.module.StratustrykeModule class')
+        if not isinstance(instance._options, Options): # options must be of Options class
             self._logger.error(f'Module: \'{mod_path}\' options are not of stratustryke.core.option.Options class')
-            raise stratustryke.core.lib.FrameworkRuntimeError(f'Module: \'{mod_path}\' options are not of stratustryke.core.option.Options class')
+            raise lib.FrameworkRuntimeError(f'Module: \'{mod_path}\' options are not of stratustryke.core.option.Options class')
         if not(instance._info.get('Authors', False) and instance._info.get('Details', False) and instance._info.get('References', False) and (instance.desc != False)): # Modules must specify this info
             self._logger.error(f'Module: {mod_path} does not designate necessary info - Author, Details, References')
-            raise stratustryke.core.lib.FrameworkRuntimeError(f'Module: {mod_path} does not designate necessary info - Author, Details, References')
+            raise lib.FrameworkRuntimeError(f'Module: {mod_path} does not designate necessary info - Author, Details, References')
         if not hasattr(instance, 'run'): # Modules must implement run() method
             self._logger.error(f'Module: \'{mod_path}\' does not implement run() method')
-            raise stratustryke.core.lib.FrameworkRuntimeError(f'Module: {mod_path} does not implement run() method')
+            raise lib.FrameworkRuntimeError(f'Module: {mod_path} does not implement run() method')
         
         # Set name, path, and store the instance
         instance.name = mod_path.split('/')[-1]
@@ -246,7 +349,7 @@ class StratustrykeFramework(object):
 
         # Ensure either the passed module or current module inherits StrautstrykeModule
         if not (mod_is_ss_module or current_mod_is_ss_module):
-            raise stratustryke.core.lib.FrameworkRuntimeError(f'StratustrykeFramework.run() called when nether passed module or current module inherit from stratustryke.core.module.StratustrykeModule')
+            raise lib.FrameworkRuntimeError(f'StratustrykeFramework.run() called when nether passed module or current module inherit from stratustryke.core.module.StratustrykeModule')
 
         module == self.current_module if (module == None) else module
 
@@ -268,7 +371,7 @@ class StratustrykeFramework(object):
         :param headers: list[str] containing column header names
         :param prefix: string to include before each line [default two spaces]
         :param table_format: type of table to generate'''
-        table_format = self._config.get_opt('DEFAULT_TABLE_FORMAT') if (table_format == None) else table_format
+        table_format = self._config.get_opt(StratustrykeFramework.CONF_DEFAULT_TABLE_FORMAT) if (table_format == None) else table_format
         table_text = tabulate.tabulate(rows, headers=headers, tablefmt=table_format)
         if prefix:
             table_text = '\n'.join(f'{prefix}{line}' for line in table_text.split('\n'))

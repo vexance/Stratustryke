@@ -1,10 +1,17 @@
+
 import sqlite3
 import logging
-from pathlib import Path
-from stratustryke import settings
-import stratustryke.core.credential
-import sqlite3
 import collections.abc
+
+from pathlib import Path
+
+from stratustryke.core.credential import Credential, CloudCredential, GenericCredential, APICredential
+from stratustryke.core.credential.aws import AWSCredential
+from stratustryke.core.credential.microsoft import MicrosoftCredential
+from stratustryke.core.credential.gcp import GCPCredential
+from stratustryke.core.module.aws import AWSModule
+from stratustryke.core.module.microsoft import MicrosoftModule
+
 
 class CredentialStoreConnector(collections.abc.Mapping):
     def __init__(self, framework, conn_str: str) -> None:
@@ -64,15 +71,15 @@ class CredentialStoreConnector(collections.abc.Mapping):
             workspace = result[2]
             str_rep = result[3]
             if cred_type == 'Generic':
-                cred = stratustryke.core.credential.GenericCredential(alias, workspace, from_dict=str_rep)
+                cred = GenericCredential(alias, workspace, from_dict=str_rep)
             elif cred_type == 'API':
-                cred = stratustryke.core.credential.APICredential(alias, workspace, from_dict=str_rep)
+                cred = APICredential(alias, workspace, from_dict=str_rep)
             elif cred_type == 'AWS':
-                cred = stratustryke.core.credential.AWSCredential(alias, workspace, from_dict=str_rep)
+                cred = AWSCredential(alias, workspace, from_dict=str_rep)
             elif cred_type == 'MSFT':
-                cred = stratustryke.core.credential.MicrosoftCredential(alias, workspace, from_dict=str_rep)
+                cred = MicrosoftCredential(alias, workspace, from_dict=str_rep)
             elif cred_type == 'GCP':
-                cred = stratustryke.core.credential.GCPCredential(alias, workspace, from_dict=str_rep)
+                cred = GCPCredential(alias, workspace, from_dict=str_rep)
             else:
                 self._logger.error(f'Could not import credential {alias} due to unsupported credential type: {cred_type}')
                 continue
@@ -87,40 +94,40 @@ class CredentialStoreConnector(collections.abc.Mapping):
         cred_type = self.get_cred_type(cred)
         opts = module._options
         
-        if cred_type == 'Generic':
+        if cred_type == Credential.CREDENTIAL_TYPE:
             pass
         
-        elif cred_type == 'API':
+        elif cred_type == APICredential.CREDENTIAL_TYPE:
             pass
 
-        elif cred_type == 'AWS':
-            opts.set_opt('AUTH_ACCESS_KEY_ID', cred._access_key_id)
-            opts.set_opt('AUTH_SECRET_KEY', cred._secret_key)
-            opts.set_opt('AUTH_SESSION_TOKEN', cred._session_token)
-            opts.set_opt('AWS_REGION', cred._default_region)
+        elif cred_type == AWSCredential.CREDENTIAL_TYPE:
+            opts.set_opt(AWSModule.OPT_ACCESS_KEY, cred._access_key_id)
+            opts.set_opt(AWSModule.OPT_SECRET_KEY, cred._secret_key)
+            opts.set_opt(AWSModule.OPT_SESSION_TOKEN, cred._session_token)
+            opts.set_opt(AWSModule.OPT_AWS_REGION, cred._default_region)
 
         elif cred_type == 'MSFT':
-            opts.set_opt('AUTH_TOKEN', cred._access_token)
-            opts.set_opt('AUTH_PRINCIPAL', cred._principal)
-            opts.set_opt('AUTH_SECRET', cred._secret)
-            opts.set_opt('AUTH_TENANT', cred._tenant)
+            opts.set_opt(MicrosoftModule.OPT_AUTH_TOKEN, cred._access_token)
+            opts.set_opt(MicrosoftModule.OPT_AUTH_PRINCIPAL, cred._principal)
+            opts.set_opt(MicrosoftModule.OPT_AUTH_SECRET, cred._secret)
+            opts.set_opt(MicrosoftModule.OPT_AUTH_TENANT, cred._tenant)
             pass
 
         elif cred_type == 'GCP':
             pass
 
 
-    def get_cred_type(self, cred: stratustryke.core.credential.CloudCredential) -> str:
+    def get_cred_type(self, cred: CloudCredential) -> str:
         '''Return the string representation of the type of credential based of its class'''
-        if isinstance(cred, stratustryke.core.credential.GenericCredential):
+        if isinstance(cred, GenericCredential):
             cred_type = 'Generic'
-        elif isinstance(cred, stratustryke.core.credential.APICredential):
+        elif isinstance(cred, APICredential):
             cred_type = 'API'
-        elif isinstance(cred, stratustryke.core.credential.AWSCredential):
+        elif isinstance(cred, AWSCredential):
             cred_type = 'AWS'
-        elif isinstance(cred, stratustryke.core.credential.MicrosoftCredential):
+        elif isinstance(cred, MicrosoftCredential):
             cred_type = 'MSFT'
-        elif isinstance(cred, stratustryke.core.credential.GCPCredential):
+        elif isinstance(cred, GCPCredential):
             cred_type = 'GCP'
         else:
             self._framework.print_error(f'Unable to store unknown credential type: {cred_type}')
@@ -129,7 +136,7 @@ class CredentialStoreConnector(collections.abc.Mapping):
         return cred_type
 
 
-    def store_credential(self, cred: stratustryke.core.credential.Credential) -> bool:
+    def store_credential(self, cred: Credential) -> bool:
         '''Save a CloudCredential object into the sqlite database'''
         cred_type = self.get_cred_type(cred)
         try:
@@ -179,6 +186,7 @@ class CredentialStoreConnector(collections.abc.Mapping):
                 out.append(str(key))
         return out
 
-    # Todo: Query database and see if a credential entries exists with the supplied alias
-    def cred_alias_exists(self, alias: str) -> bool:
-        return True
+    # # Todo: Query database and see if a credential entries exists with the supplied alias
+    # def cred_alias_exists(self, alias: str) -> bool:
+    #     return True
+

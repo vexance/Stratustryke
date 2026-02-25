@@ -5,6 +5,11 @@ import random
 import requests
 
 class Module(StratustrykeModule):
+
+    OPT_USERNAME = 'USERNAME'
+    OPT_DOMAIN = 'DOMAIN'
+    OPT_FIREPROX_URL = 'FIREPROX_URL'
+
     def __init__(self, framework) -> None:
         super().__init__(framework)
         self._info = {
@@ -14,9 +19,10 @@ class Module(StratustrykeModule):
             'References': ['https://github.com/vexance/o365enum']
         }
 
-        self._options.add_string('USERNAME', 'Username(s) / email addresses to enumerate (F/P)', True)
-        self._options.add_string('DOMAIN', 'Microsoft 365 (managed) domain to enumerate users within (F/P)', False)
-        self._options.add_string('FIREPROX_URL', 'Fireprox URL [https://login.microsoftonline.com/common/GetCredentialType?mkt=en-US] (Reccommended for 100+ users)', False)
+        self._options.add_string(Module.OPT_USERNAME, 'Username(s) / email addresses to enumerate (F/P)', True)
+        self._options.add_string(Module.OPT_DOMAIN, 'Microsoft 365 (managed) domain to enumerate users within (F/P)', False)
+        
+        self._advanced.add_string(Module.OPT_FIREPROX_URL, 'Fireprox URL [https://login.microsoftonline.com/common/GetCredentialType?mkt=en-US] (Reccommended for 100+ users)', False)
 
 
     @property
@@ -25,13 +31,13 @@ class Module(StratustrykeModule):
     
 
     def format_usernames(self) -> str:
-        usernames = self.lines_from_string_opt('USERNAME', unique=True)
+        usernames = self.lines_from_string_opt(Module.OPT_USERNAME, unique=True)
 
         usernames = list(set(usernames))
-        domains = self.lines_from_string_opt('DOMAIN', unique=True)
+        domains = self.lines_from_string_opt(Module.OPT_DOMAIN, unique=True)
 
         if domains == None:
-            self.framework.print_status('No M365 domain specified; only email addresses set in option USERNAME will be enumerated')
+            self.print_status('No M365 domain specified; only email addresses set in option USERNAME will be enumerated')
 
         addresses = []
         for user in usernames:
@@ -41,7 +47,7 @@ class Module(StratustrykeModule):
                 addresses.append(user)
             else: # just 'user
                 if domains == None:
-                    self.framework.print_warning(f'Skipping \'{user}\' because no domain(s) specified')
+                    self.print_warning(f'Skipping \'{user}\' because no domain(s) specified')
                     continue
 
                 addresses.extend([f'{user}@{domain}' for domain in domains])
@@ -51,7 +57,7 @@ class Module(StratustrykeModule):
 
     def apply_stsk_header(self, headers: dict) -> dict:
         '''Adds X-Stratustryke-Module header if necessary per HTTP_STSK_HEADER config option'''
-        if self.framework._config.get_val('HTTP_STSK_HEADER'):
+        if self.framework._config.get_val(self.framework.CONF_HTTP_STSK_HEADER):
             headers.update({'X-Stratustryke-Module': f'{self.search_name}'})
 
         return headers
@@ -59,7 +65,7 @@ class Module(StratustrykeModule):
 
     def run(self) -> None:
 
-        fp_url = self.get_opt('FIREPROX_URL')
+        fp_url = self.get_opt(Module.OPT_FIREPROX_URL)
         if fp_url == None or fp_url == '':
             endpoint = 'https://login.microsoftonline.com/common/GetCredentialType?mkt=en-US'
         else: endpoint = fp_url
@@ -158,19 +164,19 @@ class Module(StratustrykeModule):
                     if environments[domain] == "MANAGED":
                         # NotThrottled:0,AadThrottled:1,MsaThrottled:2
                         if not throttleStatus == 0:
-                            self.framework.print_warning(f'{email} - Possible throttle detected on request')
+                            self.print_warning(f'{email} - Possible throttle detected on request')
                         if ifExistsResult in ['0', '6']: #Valid user found!
-                            self.framework.print_success(f'{email} - Valid user')
+                            self.print_success(f'{email} - Valid user')
                         elif ifExistsResult == '5': # Different identity provider, but still a valid email address
-                            self.framework.print_status(f'{email} - Valid user with different IDP')
+                            self.print_status(f'{email} - Valid user with different IDP')
                         elif ifExistsResult == '1':
-                            self.framework.print_failure(f'{email} - Invalid user')
+                            self.print_failure(f'{email} - Invalid user')
                         else:                    
-                            self.framework.print_warning(f'{email} - {ifExistsResultCodes[ifExistsResult]}')
+                            self.print_warning(f'{email} - {ifExistsResultCodes[ifExistsResult]}')
                     else:
-                        self.framework.print_warning(f'{email} - Domain type \'{environments[domain]}\' not supported')
+                        self.print_warning(f'{email} - Domain type \'{environments[domain]}\' not supported')
                 else:
-                    self.framework.print_warning(f'{email} - Request error')
+                    self.print_warning(f'{email} - Request error')
             else:
-                self.framework.print_warning(f'{email} - Domain type \'{environments[domain]}\' not supported')
+                self.print_warning(f'{email} - Domain type \'{environments[domain]}\' not supported')
 

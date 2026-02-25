@@ -3,9 +3,11 @@
 # Credit: Heavily inspired by @zeroSteiner's Options class for Termineter
 #
 
-from re import match
 import typing
-from stratustryke.core.lib import StratustrykeException
+
+from re import match
+
+from stratustryke.lib import StratustrykeException
 
 class Option:
     '''Module or framework option'''
@@ -187,7 +189,9 @@ class Options:
             option._value = value
 
         elif option._opt_type == 'bool': # Boolean
-            if value.lower() in ['true', '1', 'on']:
+            if isinstance(value, bool): option._value = value
+
+            elif value.lower() in ['true', '1', 'on']:
                 option._value = True
             elif value.lower() in ['false', '0', 'off']:
                 option._value = False

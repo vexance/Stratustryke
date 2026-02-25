@@ -4,8 +4,6 @@ from __future__ import unicode_literals
 
 import argparse
 import logging
-import os
-import sys
 
 from stratustryke import __version__
 from stratustryke.core.interface import InteractiveInterpreter
@@ -29,6 +27,7 @@ def main():
 	interpreter = InteractiveInterpreter(rc_file=rc_file, log_handler=console_log_handler)
 	interpreter.cmdloop()
 	logging.shutdown()
+
 
 if __name__ == '__main__':
 	main()
