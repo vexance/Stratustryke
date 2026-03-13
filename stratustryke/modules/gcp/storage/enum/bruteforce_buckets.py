@@ -4,8 +4,7 @@ import requests
 from pathlib import Path
 
 from stratustryke.core.module import StratustrykeModule
-from stratustryke.core.lib import stratustryke_dir
-
+from stratustryke.lib import stratustryke_dir
 
 
 class Module(StratustrykeModule):

@@ -1,9 +1,8 @@
 
 * aws/s3/enum/resource_account_id
     * Multi-bucket/object support and swap to S3 URI input format
-
-* aws/cloudformation/privesc/create_backdoor_role
 * aws/lambda/privesc/create_func_role_creds
+* aws/ec2/privesc/launch_instance_role_creds
 * aws/ecr/enum/registry_inspector
 * aws/ec2/enum/ip_address_collector
     * aws/multi/enum/ip_address_collector

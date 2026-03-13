@@ -6,3 +6,5 @@ lib64
 /lib/
 pyvenv.cfg
 stratustryke/modules/custom/*
+ignored/
+**.DS_Store
