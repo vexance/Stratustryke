@@ -32,7 +32,7 @@ class Module(AWSModule):
         return f'aws/lambda/enum/{self.name}'
     
 
-    def list_lambdas(region: str, self) -> list:
+    def list_lambdas(self, region: str) -> list:
         '''List lambdas in the region, return list of function names with the given prefix. If list operation fails, return ["LAMBDA_PREFIX"]'''
         session  = self.get_cred().session(region)
         lambdas = []
