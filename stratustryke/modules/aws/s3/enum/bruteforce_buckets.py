@@ -35,10 +35,9 @@ class Module(StratustrykeModule):
             return (valid, msg)
 
         key = self.get_opt(Module.OPT_KEYWORD)
-        filename = filename if (Path.exists(filename)) else None
-        if filename != None:
-            if not (Path(filename).exists() and Path(filename).is_file()):
-                return (False, f"Cannot find keyword file '{filename}'")
+        # KEYWORD doubles as a keyword file when it points at an existing path (see run())
+        if key and Path(key).exists() and not Path(key).is_file():
+            return (False, f"Keyword path '{key}' exists but is not a file")
 
         perms = self.get_opt(Module.OPT_MUTATIONS)
         if not (Path(perms).exists() and Path(perms).is_file()):

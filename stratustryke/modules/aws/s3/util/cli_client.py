@@ -174,7 +174,7 @@ class S3ClientExplorer(Command):
     @property
     def prompt(self) -> str:
         coloring = self.framework._config.get_val(self.framework.CONF_COLORED_OUTPUT)
-        prog_name = colored("stratustryke", "blue", attrs=("bold",)) if (coloring) else stratustryke
+        prog_name = colored("stratustryke", "blue", attrs=("bold",)) if (coloring) else "stratustryke"
         mod_name = colored("s3-explorer", "green", attrs=("bold",)) if (coloring) else "s3-explorer"
 
         if self.current_bucket == None:
