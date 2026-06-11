@@ -38,7 +38,7 @@ class Module(AWSModule):
         return f'aws/ec2/enum/{self.name}'
     
 
-    def describe_instances(self, region: str, targets: str | list[str] | None) -> list:
+    def describe_instances(self, region: str, targets: str | list[str] | None = None) -> list:
         session = self.get_cred().session(region)
         account = self.get_cred().account_id
         only_running = self.get_opt(Module.OPT_ONLY_RUNNING)
@@ -208,9 +208,9 @@ class Module(AWSModule):
                 self.print_status(f'Enumerating information for target instances in {region}...')
 
                 if individual_calls: # One-by-one in case we can describe some, but not all
-                    for target in target_ids: self.describe_instances(region, target_ids=target)
+                    for target in target_ids: self.describe_instances(region, targets=target)
 
-                else: instances = self.describe_instances(region, target_ids=list(target_ids))
+                else: instances = self.describe_instances(region, targets=list(target_ids))
 
                 # Likely poor handling for instances that don't exist. But whatever...
                 # Todo: come back to this and skip instances that didn't have a describe call response?
