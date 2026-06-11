@@ -82,7 +82,7 @@ class MicrosoftCredential(CloudCredential):
 
         if (self._interactive) or (self._principal == None and self._secret == None):
             try:
-                cred = azure.identity.DeviceCodeCredential(client_id=AZ_CLI_CLIENT_ID, tenant_id=self._tenant)
+                cred = azure.identity.DeviceCodeCredential(client_id=MicrosoftCredential.AZ_CLI_CLIENT_ID, tenant_id=self._tenant)
             except Exception as err:
                 raise StratustrykeException(f"Error getting interactive browser credentials: {err}")
 
@@ -96,7 +96,7 @@ class MicrosoftCredential(CloudCredential):
                 if regex_match(UUID_LOWERCASE_REGEX, self._principal):
                     cred = azure.identity.ClientSecretCredential(tenant_id=self._tenant, client_id=self._principal, client_secret=self._secret)
                 else:  # Can't be a service principal; use default client_id for azure CLI
-                    cred = azure.identity.UsernamePasswordCredential(tenant_id=self._tenant, username=self._principal, password=self._secret, client_id=AZ_CLI_CLIENT_ID)
+                    cred = azure.identity.UsernamePasswordCredential(tenant_id=self._tenant, username=self._principal, password=self._secret, client_id=MicrosoftCredential.AZ_CLI_CLIENT_ID)
 
             except Exception as err:
                 raise StratustrykeException(f"Error during service principal / user auth: {err}")
