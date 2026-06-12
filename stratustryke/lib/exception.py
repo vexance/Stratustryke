@@ -1,18 +1,16 @@
-# Just some thin wrappers for custom exception types 
+# Just some thin wrappers for custom exception types
 #
 
 from stratustryke.lib import StratustrykeException
 
 
 class FrameworkConfigurationError(StratustrykeException):
-	pass
+    pass
 
 
 class FrameworkRuntimeError(StratustrykeException):
-	pass
+    pass
 
 
 class ThrottlingException(Exception):
     pass
-
-

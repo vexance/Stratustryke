@@ -72,7 +72,7 @@
 #                 #     results = search(query, num=50, stop=max_results, pause=delay, user_agent=self.random_agent())
 #                 #     for result in results:
 #                 #         self.print_success(f'{result}')
-                    
+
 #                 #     sleep(delay)
 #                 # except Exception as err:
 #                 #     self.print_warning(f'{err}')
@@ -82,15 +82,12 @@
 #                 #         if ctr > threshold:
 #                 #             self.print_failure('Throttled 3 or more times, quitting!')
 #                 #             return False
-                        
+
 #                 #         self.print_status(f'({ctr}/{threshold}) Throttled - sleeping {delay}x10 ({delay*10}) seconds...')
 #                 #         sleep(delay*10)
 #                 #     else:
 #                 #         self.framework._logger.error(f'{err}')
 #                 #         return False
-                
 
 
 #         return True
-
-

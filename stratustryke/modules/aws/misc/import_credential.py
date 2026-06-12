@@ -1,33 +1,24 @@
-
-
 from stratustryke.core.module.aws import AWSModule
 from stratustryke.core.credential.aws import AWSCredential
 from stratustryke.settings import AWS_DEFAULT_REGION
 
+
 class Module(AWSModule):
 
-    OPT_ALIAS_NAME = 'ALIAS'
-    OPT_WORKSPACE = 'WORKSPACE'
+    OPT_ALIAS_NAME = "ALIAS"
+    OPT_WORKSPACE = "WORKSPACE"
 
     def __init__(self, framework) -> None:
         super().__init__(framework)
-        self._info = {
-            'Authors': ['@vexance'],
-            'Description': 'Import AWS programmatic credentials into the credstore',
-            'Details': 'Import AWS programmatic credentials into the credstore',
-            'References': ['']
-        }
+        self._info = {"Authors": ["@vexance"], "Description": "Import AWS programmatic credentials into the credstore", "Details": "Import AWS programmatic credentials into the credstore", "References": [""]}
 
-
-        self._options.add_string(Module.OPT_ALIAS_NAME, 'Alias name for the credential', True)
-        self._options.add_string(Module.OPT_WORKSPACE, 'Workspace to associate with the credential', True, default=self.framework._config.get_val(self.framework.CONF_WORKSPACE))
+        self._options.add_string(Module.OPT_ALIAS_NAME, "Alias name for the credential", True)
+        self._options.add_string(Module.OPT_WORKSPACE, "Workspace to associate with the credential", True, default=self.framework._config.get_val(self.framework.CONF_WORKSPACE))
         self._options.set_opt(Module.OPT_AWS_REGION, AWS_DEFAULT_REGION)
-
 
     @property
     def search_name(self):
-        return f'aws/misc/{self.name}'
-
+        return f"aws/misc/{self.name}"
 
     def run(self):
         access_key = self.get_opt(Module.OPT_ACCESS_KEY)
@@ -37,7 +28,7 @@ class Module(AWSModule):
         region = self.get_opt(Module.OPT_AWS_REGION)
         workspace = self.get_opt(Module.OPT_WORKSPACE)
 
-        if region == None or region == '':
+        if region == None or region == "":
             region = AWS_DEFAULT_REGION
 
         # First None val passed is for account id (to be deprecated in place of a property derived from GetCallerIdentity)
